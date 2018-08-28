@@ -35,11 +35,13 @@ endif
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/apache/Default
-  SECTION:=net
-  CATEGORY:=Network
-  SUBMENU:=Web Servers/Proxies
+define Package/apache
+  SECTION:=xNN's Feed
+  CATEGORY:=xNN's Feed
   TITLE:=The Apache Web Server
+  DEPENDS:=libc
+  SUBMENU:=Hackox dependencies
+  MENU:=1
   URL:=http://httpd.apache.org/
 endef
 

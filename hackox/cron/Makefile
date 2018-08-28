@@ -20,12 +20,14 @@ include $(INCLUDE_DIR)/package.mk
 
 PKG_UNPACK=cd $(PKG_BUILD_DIR) && cat $(DL_DIR)/$(PKG_SOURCE) | sh -x
 
-define Package/cron
-	SECTION:=utils
-	CATEGORY:=Utilities
-	TITLE:=Vixie cron
-	URL:=ftp://ftp.isc.org/isc/cron
-	MAINTAINER:=Entware team, https://entware.net
+define Package/wput
+  SECTION:=xNN's Feed
+  CATEGORY:=xNN's Feed
+  TITLE:=Vixie cron
+  DEPENDS:=libc
+  SUBMENU:=Hackox dependencies
+  MENU:=1
+  URL:=ftp://ftp.isc.org/isc/cron
 endef
 
 define Package/cron/description

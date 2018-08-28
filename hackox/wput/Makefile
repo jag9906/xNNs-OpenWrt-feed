@@ -19,10 +19,12 @@ PKG_HASH:=229d8bb7d045ca1f54d68de23f1bc8016690dc0027a16586712594fbc7fad8c7
 include $(INCLUDE_DIR)/package.mk
 
 define Package/wput
-  SUBMENU:=File Transfer
-  SECTION:=net
-  CATEGORY:=Network
+  SECTION:=xNN's Feed
+  CATEGORY:=xNN's Feed
   TITLE:=A tiny wget-like ftp-client for uploading files
+  DEPENDS:=libc
+  SUBMENU:=Hackox dependencies
+  MENU:=1
   URL:=http://wput.sourceforge.net/
 endef
 

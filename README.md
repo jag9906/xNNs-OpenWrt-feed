@@ -1,7 +1,8 @@
 # xNN's-openwrt-feed
 
-packages:
-apache2
-cron
-wput
-more to come..
+Packages:
+dependencies for Hackox
+- apache2
+- cron
+- wput
+

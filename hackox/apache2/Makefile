@@ -7,7 +7,7 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=apache
+PKG_NAME:=apache2
 PKG_VERSION:=2.4.28
 PKG_RELEASE:=2a
 PKG_SOURCE_NAME:=httpd
@@ -35,38 +35,32 @@ endif
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/apache
+define Package/apache2
+  DEPENDS:=+libapr +libaprutil +libpcre +libopenssl +unixodbc +zlib +APACHE_HTTP2:libnghttp2 +libxml2
   SECTION:=xNN's Feed
   CATEGORY:=xNN's Feed
   TITLE:=The Apache Web Server
-  DEPENDS:=libc
   SUBMENU:=Hackox dependencies
   MENU:=1
   URL:=http://httpd.apache.org/
 endef
 
-define Package/apache/Default/description
+define Package/apache2/description
  The Apache Web Server is a powerful and flexible HTTP/1.1 compliant
  web server.  Originally designed as a replacement for the NCSA HTTP
  Server, it has grown to be the most popular web server on the Internet.
 endef
 
-define Package/apache/config
+define Package/apache2/config
   source "$(SOURCE)/Config.in"
 endef
 
-define Package/apache
-$(call Package/apache/Default)
-  DEPENDS:=+libapr +libaprutil +libpcre +libopenssl +unixodbc +zlib +APACHE_HTTP2:libnghttp2 +libxml2
+define Package/apache2
+$(call Package/apache2/Default)
+  
 endef
 
-define Package/apache/description
-$(call Package/apache/Default/description)
- .
- This package contains the Apache web server and utility programs.
-endef
-
-define Package/apache/conffiles
+define Package/apache2/conffiles
 /opt/etc/apache/httpd.conf
 /opt/etc/apache/extra/httpd-autoindex.conf
 /opt/etc/apache/extra/httpd-dav.conf
@@ -83,10 +77,14 @@ define Package/apache/conffiles
 /opt/etc/apache/mime.types
 endef
 
-define Package/apache-icons
+define Package/apache2-icons
 $(call Package/apache/Default)
   TITLE:=Icons from Apache
   DEPENDS:=apache
+  SUBMENU:=Hackox dependencies
+  SECTION:=xNN's Feed
+  CATEGORY:=xNN's Feed
+  MENU:=1
 endef
 
 define Package/apache-icons/description

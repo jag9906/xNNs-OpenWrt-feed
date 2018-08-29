@@ -66,4 +66,3 @@ include $(TOPDIR)/rules.mk
   endef
   
   $(eval $(call BuildPackage,libnids))
-  

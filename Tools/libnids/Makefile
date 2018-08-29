@@ -18,8 +18,9 @@
   18 include $(INCLUDE_DIR)/package.mk
   19 
   20 define Package/libnids
-  21   SECTION:=libs
-  22   CATEGORY:=Libraries
+	   SECTION:=xNN's Feed
+	   CATEGORY:=xNN's Feed
+	   SUBMENU:=Tools
   23   DEPENDS:=+libnet0
   24   TITLE:=A network intrusion detection library
   25   URL:=http://libnids.sourceforge.net/

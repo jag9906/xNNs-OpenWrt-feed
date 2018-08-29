@@ -1,11 +1,11 @@
 #
-   2 # Copyright (C) 2006-2009 OpenWrt.org
-   3 #
-   4 # This is free software, licensed under the GNU General Public License v2.
-   5 # See /LICENSE for more information.
-   6 #
-   7 
-   8 include $(TOPDIR)/rules.mk
+# Copyright (C) 2006 OpenWrt.org
+#
+# This is free software, licensed under the GNU General Public License v2.
+# See /LICENSE for more information.
+#
+
+include $(TOPDIR)/rules.mk
    9 
   10 PKG_NAME:=libnids
   11 PKG_VERSION:=1.24

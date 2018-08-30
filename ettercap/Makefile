@@ -24,7 +24,7 @@ include $(INCLUDE_DIR)/cmake.mk
 define Package/ettercap
   SECTION:=xNN's Feed
   CATEGORY:=xNN's Feed
-  DEPENDS:=+libcurl +libpcap +libnet1 +libopenssl +libpcre +libncurses +libltdl +libpthread +zlib +libiconv-full
+  DEPENDS:=+libcurl +libpcap +libnet +libopenssl +libpcre +libncurses +libltdl +libpthread +zlib +libiconv-full
   TITLE:=Ettercap is a suite for man in the middle attacks on LAN.
   URL:=http://www.ettercap-project.org
 endef

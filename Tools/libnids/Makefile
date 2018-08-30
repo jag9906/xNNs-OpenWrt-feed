@@ -12,7 +12,7 @@ include $(TOPDIR)/rules.mk
   PKG_RELEASE:=1
   
   PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
-  PKG_SOURCE_URL:=@SF/libnids
+  PKG_SOURCE_URL:=https://sourceforge.net/projects/libnids/files/libnids/1.24/libnids-1.24.tar.gz
   PKG_MD5SUM:=72d37c79c85615ffe158aa524d649610
   
   include $(INCLUDE_DIR)/package.mk

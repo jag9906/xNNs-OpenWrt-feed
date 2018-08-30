@@ -25,8 +25,8 @@ include $(INCLUDE_DIR)/package.mk
 TARGET_CFLAGS += $(FPIC)
 
 define Package/libnet-1.2.x
- SECTION:=libs
- CATEGORY:=Libraries
+ SECTION:=xNN's Feed
+ CATEGORY:=xNN's Feed
  DEPENDS:=+libpcap
  TITLE:=Low-level packet creation library
 endef

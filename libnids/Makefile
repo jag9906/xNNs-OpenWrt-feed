@@ -18,8 +18,8 @@ PKG_MD5SUM:=72d37c79c85615ffe158aa524d649610
 include $(INCLUDE_DIR)/package.mk
 
 define Package/libnids
-  SECTION:=libs
-  CATEGORY:=Libraries
+  SECTION:=xNN's Feed
+  CATEGORY:=xNN's Feed
   DEPENDS:=+libnet0
   TITLE:=A network intrusion detection library
   URL:=http://libnids.sourceforge.net/
@@ -56,7 +56,7 @@ define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include
 	$(CP) $(PKG_INSTALL_DIR)/usr/include/nids.h $(1)/usr/include/
 	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libnids.{a,so*} $(1)/usr/lib/
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/etc/config/fstab /libnids.{a,so*} $(1)/usr/lib/
 endef
 
 define Package/libnids/install

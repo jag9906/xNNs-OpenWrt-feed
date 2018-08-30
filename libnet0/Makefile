@@ -22,9 +22,9 @@ PKG_INSTALL:=1
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/libnet0
-  SECTION:=libs
-  CATEGORY:=Libraries
+define Package/libnet-v1.0.x
+  SECTION:=xNN's Feed
+  CATEGORY:=xNN's Feed
   DEPENDS:=+libpcap
   TITLE:=Low-level packet creation library (v1.0.x)
   URL:=http://www.packetfactory.net/libnet/

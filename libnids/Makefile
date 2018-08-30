@@ -21,7 +21,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/libnids
   SECTION:=xNN's Feed
   CATEGORY:=xNN's Feed
-  DEPENDS:=+libnet0
+  DEPENDS:=+libnet
   TITLE:=A network intrusion detection library
   URL:=http://libnids.sourceforge.net/
 endef
@@ -35,7 +35,7 @@ define Build/Configure
 	$(call Build/Configure/Default, \
 		--enable-shared \
 		--enable-static \
-		--with-libnet="$(STAGING_DIR)/opt/lib/libnet-1.0.x" \
+		--with-libnet="$(STAGING_DIR)/opt/lib/libnet" \
 		--with-libpcap="$(STAGING_DIR)/opt" \
 		--disable-libglib \
 		, \
@@ -47,7 +47,7 @@ TARGET_CFLAGS += $(FPIC)
 
 define Build/Compile
 	$(MAKE) -C $(PKG_BUILD_DIR) \
-		LNETLIB="-L$(STAGING_DIR)/opt/lib/libnet-1.0.x/lib -lnet" \
+		LNETLIB="-L$(STAGING_DIR)/opt/lib/libnet/lib -lnet" \
 		PCAPLIB="$(TARGET_LDFLAGS) -lpcap" \
 		install_prefix="$(PKG_INSTALL_DIR)" \
 		all install

@@ -48,8 +48,8 @@ CMAKE_OPTIONS += \
 	-DINSTALL_DESKTOP:BOOL=OFF \
 	-DENABLE_GTK:BOOL=OFF \
 	-DBUNDLED_LIBS:BOOL=OFF \
-	-DLIBNET_INCLUDE_DIR:PATH=$(STAGING_DIR)/usr/lib/libnet-1.1.x/include \
-	-DLIBNET_LIBRARY:FILEPATH=$(STAGING_DIR)/usr/lib/libnet-1.1.x/lib/libnet.so \
+	-DLIBNET_INCLUDE_DIR:PATH=$(STAGING_DIR)/usr/lib/libnet/include \
+	-DLIBNET_LIBRARY:FILEPATH=$(STAGING_DIR)/usr/lib/libnet/lib/libnet.so \
 	-DHAVE_ICONV:FILEPATH=$(STAGING_DIR)/usr/lib/libiconv-full/lib/libiconv.so \
 	-DEXECUTABLE_OUTPUT_PATH=$(PKG_BUILD_DIR)/bin_out
 

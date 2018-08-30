@@ -1,75 +1,71 @@
 #
-# Copyright (C) 2006-2014 OpenWrt.org
+# Copyright (C) 2015 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
 #
-# Used by abandoned dsniff, iproute2-legacy and libnids, no need to update it.
 
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libnet
-PKG_VERSION:=1.0.2a
-PKG_RELEASE:=9
+PKG_VERSION:=1.2-rc3
+PKG_RELEASE:=4
 
-PKG_SOURCE:=libnet-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=http://www.packetfactory.net/libnet/dist/deprecated/
-PKG_HASH:=7c7f2e8ccb47bb47072c5cd583fea5e90ab892c75889b625346b60d10464459a
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_URL:=http://sourceforge.net/projects/libnet-dev/files/
+PKG_HASH:=72c380785ad44183005e654b47cc12485ee0228d7fa6b0a87109ff7614be4a63
+PKG_MAINTAINER:=Mislav Novakovic <mislav.novakovic@sartura.hr>
+PKG_LICENSE:=GPL-2.0
 
-PKG_BUILD_DIR:=$(BUILD_DIR)/Libnet-$(PKG_VERSION)
 PKG_FIXUP:=autoreconf
 PKG_INSTALL:=1
 
 include $(INCLUDE_DIR)/package.mk
 
+TARGET_CFLAGS += $(FPIC)
+
 define Package/libnet
-  SECTION:=xNN's Feed
-  CATEGORY:=xNN's Feed
-  DEPENDS:=+libpcap
-  TITLE:=Low-level packet creation library (v1.0.x)
-  URL:=http://www.packetfactory.net/libnet/
+ SECTION:=xNN's Feed
+ CATEGORY:=xNN's Feed
+ DEPENDS:=+libpcap
+ TITLE:=Low-level packet creation library
 endef
 
-ENDIANESS:=lil
-ifeq ($(CONFIG_BIG_ENDIAN),y)
-  ENDIANESS:=big
-endif
-
-TARGET_CFLAGS += $(FPIC)
 
 CONFIGURE_ARGS += \
 	--enable-shared \
-	--enable-static \
-	--with-pf_packet=yes
+	--enable-static
 
 CONFIGURE_VARS += \
 	ac_cv_libnet_endianess=$(ENDIANESS) \
-	ac_libnet_have_pf_packet=yes \
-	LL_INT_TYPE=sockpacket
+	libnet_cv_have_packet_socket=yes \
+	LL_INT_TYPE=libnet_link_linux
 
 define Build/Configure
 	(cd $(PKG_BUILD_DIR); touch \
-		configure.in \
-		include.m4 \
-		aclocal.m4 \
-		Makefile.in \
-		configure \
+	configure.in \
+	include.m4 \
+	aclocal.m4 \
+	Makefile.in \
 	);
 	$(call Build/Configure/Default)
 endef
 
+
 define Build/InstallDev
-	$(INSTALL_DIR) $(1)/opt/lib/libnet/bin/
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/libnet-config $(1)/opt/lib/libnet/bin/
-	$(INSTALL_DIR) $(1)/opt/lib/libnet/include
-	$(CP) $(PKG_INSTALL_DIR)/opt/include/libnet* $(1)/opt/lib/libnet/include/
-	$(INSTALL_DIR) $(1)/opt/lib/libnet/lib
-	$(CP) $(PKG_INSTALL_DIR)/opt/lib/libnet.{a,so*} $(1)/opt/lib/libnet/lib/
+	$(INSTALL_DIR) $(STAGING_DIR)/usr/include
+	$(CP) $(PKG_INSTALL_DIR)/usr/include/libnet.h $(STAGING_DIR)/usr/include
+
+	$(INSTALL_DIR) $(STAGING_DIR)/usr/include/libnet
+	$(CP) $(PKG_INSTALL_DIR)/usr/include/libnet/libnet-*.h $(STAGING_DIR)/usr/include/libnet
+
+	$(INSTALL_DIR) $(STAGING_DIR)/usr/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libnet.{a,la,so*} $(STAGING_DIR)/usr/lib
 endef
 
 define Package/libnet/install
-	$(INSTALL_DIR) $(1)/opt/lib
-	$(CP) $(PKG_INSTALL_DIR)/opt/lib/libnet.so.* $(1)/opt/lib/
+	$(INSTALL_DIR) $(1)/usr/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libnet.so* $(1)/usr/lib/
 endef
 
-$(eval $(call BuildPackage,libnet0))
+$(eval $(call BuildPackage,libnet))

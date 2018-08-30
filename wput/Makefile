@@ -23,8 +23,6 @@ define Package/wput
   CATEGORY:=xNN's Feed
   TITLE:=A tiny wget-like ftp-client for uploading files
   DEPENDS:=libc
-  SUBMENU:=Tools
-  MENU:=1
   URL:=http://wput.sourceforge.net/
 endef
 

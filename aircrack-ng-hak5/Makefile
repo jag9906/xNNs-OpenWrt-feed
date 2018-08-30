@@ -33,8 +33,6 @@ define Package/aircrack-ng-hak5
   CATEGORY:=xNN's Feed
   TITLE:=WLAN tools for breaking 802.11 WEP/WPA keys
   DEPENDS:=+libpcap +libpthread +libopenssl +libnl +wireless-tools +ethtool +libstdcpp +libpcre +libsqlite3
-  SUBMENU:=Tools
-  MENU:=1
   URL:=https://www.aircrack-ng.org/
 endef
 

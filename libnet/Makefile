@@ -8,7 +8,7 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=libnet0
+PKG_NAME:=libnet
 PKG_VERSION:=1.0.2a
 PKG_RELEASE:=9
 
@@ -22,7 +22,7 @@ PKG_INSTALL:=1
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/libnet0
+define Package/libnet
   SECTION:=xNN's Feed
   CATEGORY:=xNN's Feed
   DEPENDS:=+libpcap
@@ -59,15 +59,15 @@ define Build/Configure
 endef
 
 define Build/InstallDev
-	$(INSTALL_DIR) $(1)/opt/lib/libnet-1.0.x/bin/
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/libnet-config $(1)/opt/lib/libnet-1.0.x/bin/
-	$(INSTALL_DIR) $(1)/opt/lib/libnet-1.0.x/include
-	$(CP) $(PKG_INSTALL_DIR)/opt/include/libnet* $(1)/opt/lib/libnet-1.0.x/include/
-	$(INSTALL_DIR) $(1)/opt/lib/libnet-1.0.x/lib
-	$(CP) $(PKG_INSTALL_DIR)/opt/lib/libnet.{a,so*} $(1)/opt/lib/libnet-1.0.x/lib/
+	$(INSTALL_DIR) $(1)/opt/lib/libnet/bin/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/bin/libnet-config $(1)/opt/lib/libnet/bin/
+	$(INSTALL_DIR) $(1)/opt/lib/libnet/include
+	$(CP) $(PKG_INSTALL_DIR)/opt/include/libnet* $(1)/opt/lib/libnet/include/
+	$(INSTALL_DIR) $(1)/opt/lib/libnet/lib
+	$(CP) $(PKG_INSTALL_DIR)/opt/lib/libnet.{a,so*} $(1)/opt/lib/libnet/lib/
 endef
 
-define Package/libnet0/install
+define Package/libnet/install
 	$(INSTALL_DIR) $(1)/opt/lib
 	$(CP) $(PKG_INSTALL_DIR)/opt/lib/libnet.so.* $(1)/opt/lib/
 endef

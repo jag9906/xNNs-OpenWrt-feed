@@ -1,0 +1,6 @@
+os_support=*-linux
+version=1.890
+longdesc=Lets you edit the most useful tables of the Shoreline Firewall
+desc=Shoreline Firewall
+category=net
+depends=syslog 1.890

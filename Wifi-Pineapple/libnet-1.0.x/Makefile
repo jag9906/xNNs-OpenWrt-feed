@@ -22,8 +22,9 @@ PKG_INSTALL:=1
 include $(INCLUDE_DIR)/package.mk
 
 define Package/libnet0
-  SECTION:=libs
-  CATEGORY:=Libraries
+  SECTION:=xNN's Feed
+  CATEGORY:=xNN's Feed
+  SUBMENU:=Wifi-Pineapple
   DEPENDS:=+libpcap
   TITLE:=Low-level packet creation library (v1.0.x)
   URL:=http://www.packetfactory.net/libnet/

@@ -18,8 +18,9 @@ PKG_MD5SUM:=72d37c79c85615ffe158aa524d649610
 include $(INCLUDE_DIR)/package.mk
 
 define Package/libnids
-  SECTION:=libs
-  CATEGORY:=Libraries
+  SECTION:=xNN's Feed
+  CATEGORY:=xNN's Feed
+  SUBMENU:=Wifi-Pineapple
   DEPENDS:=+libnet0
   TITLE:=A network intrusion detection library
   URL:=http://libnids.sourceforge.net/

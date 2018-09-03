@@ -14,9 +14,9 @@ PKG_MAINTAINER:=Hua Shao <nossiac@163.com>
 include $(INCLUDE_DIR)/package.mk
 
 define Package/nvram
-  SECTION:=MTK Properties
-  CATEGORY:=MTK Properties
-  SUBMENU:=Applications
+  SECTION:=xNN's Feed
+  CATEGORY:=xNN's Feed
+  SUBMENU:=MTK
   TITLE:=MTK APSoC nvram tool
   DEPENDS:=+libnvram
   MENU:=1

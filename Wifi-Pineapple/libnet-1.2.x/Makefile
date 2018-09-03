@@ -7,7 +7,7 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=libnet
+PKG_NAME:=libnet-1.2.x
 PKG_VERSION:=1.2-rc3
 PKG_RELEASE:=3
 
@@ -24,7 +24,7 @@ include $(INCLUDE_DIR)/package.mk
 
 TARGET_CFLAGS += $(FPIC)
 
-define Package/libnet
+define Package/libnet-1.2.x
  SECTION:=xNN's Feed
  CATEGORY:=xNN's Feed
  SUBMENU:=Wifi-Pineapple

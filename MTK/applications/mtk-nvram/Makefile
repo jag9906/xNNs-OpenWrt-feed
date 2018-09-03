@@ -35,9 +35,9 @@ define Package/flash
 endef
 
 define Package/libnvram
-  SECTION:=MTK Properties
-  CATEGORY:=MTK Properties
-  SUBMENU:=Libraries
+  SECTION:=xNN's Feed
+  CATEGORY:=xNN's Feed
+  SUBMENU:=MTK
   TITLE:=MTK APSoC nvram library
   DEPENDS:=
 endef

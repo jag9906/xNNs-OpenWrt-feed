@@ -22,7 +22,7 @@ define Package/libnids
  SECTION:=xNN's Feed
  CATEGORY:=xNN's Feed
  SUBMENU:=Wifi-Pineapple
- DEPENDS:=+libnet-1.2.x
+ DEPENDS:=+libnet
  TITLE:=A network intrusion detection library
  URL:=http://libnids.sourceforge.net/
 endef

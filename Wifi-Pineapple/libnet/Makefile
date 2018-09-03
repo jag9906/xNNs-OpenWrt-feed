@@ -25,9 +25,9 @@ include $(INCLUDE_DIR)/package.mk
 TARGET_CFLAGS += $(FPIC)
 
 define Package/libnet
-  SECTION:=xNN's Feed
-  CATEGORY:=xNN's Feed
-  SUBMENU:=Wifi-Pineapple
+ SECTION:=xNN's Feed
+ CATEGORY:=xNN's Feed
+ SUBMENU:=Wifi-Pineapple
  DEPENDS:=+libpcap
  TITLE:=Low-level packet creation library
 endef

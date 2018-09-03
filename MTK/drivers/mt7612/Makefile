@@ -26,16 +26,18 @@ define Package/mt76x2
 endef
 
 define Package/mt7602
-  CATEGORY:=MTK Properties
-  SUBMENU:=Drivers
+  SECTION:=xNN's Feed
+  CATEGORY:=xNN's Feed
+  SUBMENU:=MTK
   TITLE:=MTK MT7602 WiFi AP driver
   AUTOLOAD:=$(call AutoProbe,mt7602)
   DEPENDS:=+wireless-tools +mt76x2
 endef
 
 define Package/mt7612
-  CATEGORY:=MTK Properties
-  SUBMENU:=Drivers
+  SECTION:=xNN's Feed
+  CATEGORY:=xNN's Feed
+  SUBMENU:=MTK
   TITLE:=MTK MT7612 WiFi AP driver
   AUTOLOAD:=$(call AutoProbe,mt7612)
   DEPENDS:=+wireless-tools +mt76x2

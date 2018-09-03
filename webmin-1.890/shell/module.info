@@ -1,6 +1,0 @@
-version=1.890
-longdesc=Execute shell commands and view their output.
-desc=Command Shell
-name=Shell
-depends=1.890
-risk=high

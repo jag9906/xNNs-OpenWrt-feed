@@ -1,4 +1,0 @@
-id=xinetd
-type=xinetd
-desc=Extended Internet Server
-depends=xinetd

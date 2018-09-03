@@ -1,6 +1,0 @@
-version=1.890
-desc=Exim Mailserver
-name=Exim Mail Server
-hidden=1
-category=servers
-depends=1.890

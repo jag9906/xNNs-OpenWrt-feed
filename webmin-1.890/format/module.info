@@ -1,9 +1,0 @@
-version=1.890
-nozone=1
-longdesc=Create and edit paritions on local disks on Solaris.
-name=Partition Manager
-os_support=solaris
-desc=Partitions on Local Disks
-category=hardware
-risk=high
-depends=mount proc 1.890

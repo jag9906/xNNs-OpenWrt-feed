@@ -1,6 +1,0 @@
-os_support=*-linux freebsd macos
-version=1.890
-longdesc=Check the status of IDE and SATA drives to detect problems and potential failures.
-desc=SMART Drive Status
-category=hardware
-depends=1.890

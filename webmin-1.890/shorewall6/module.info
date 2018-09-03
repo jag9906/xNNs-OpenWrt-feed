@@ -1,6 +1,0 @@
-os_support=*-linux
-version=1.890
-longdesc=Lets you edit the most useful tables of the Shorewall6 Firewall
-desc=Shorewall6 Firewall
-category=net
-depends=syslog 1.890

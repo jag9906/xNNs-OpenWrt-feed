@@ -1,4 +1,0 @@
-id=squid
-type=squid
-desc=Squid Proxy Server
-depends=squid

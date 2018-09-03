@@ -1,7 +1,0 @@
-usermin=1
-webmin=1
-version=1.890
-desc=File Manager
-longdesc=Fast and light File Manager written in Perl.
-name=File Manager
-depends=1.890

@@ -1,7 +1,0 @@
-readonly=1
-version=1.890
-longdesc=Create .htaccess and htpasswd files to protect web-acessible directories.
-desc=Protected Web Directories
-name=HTAccess Files
-library=htaccess-lib.pl
-depends=useradmin apache 1.890

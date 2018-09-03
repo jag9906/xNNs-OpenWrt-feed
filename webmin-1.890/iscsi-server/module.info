@@ -1,6 +1,0 @@
-os_support=*-linux freebsd
-version=1.890
-longdesc=Share disk devices across the network using the iSCSI protocol with the netbsd-iscsi package.
-desc=iSCSI Server
-category=hardware
-depends=fdisk lvm raid init 1.890

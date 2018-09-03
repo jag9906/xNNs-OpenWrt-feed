@@ -1,6 +1,0 @@
-version=1.890
-longdesc=View the status of services on your system and on remote systems.
-desc=System and Server Status
-name=Status
-depends=servers cron mailboxes 1.890
-risk=low medium high

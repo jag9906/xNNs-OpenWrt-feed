@@ -1,4 +1,0 @@
-id=bind8
-type=bind8
-desc=BIND DNS Server
-depends=bind8

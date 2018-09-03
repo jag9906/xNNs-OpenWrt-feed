@@ -1,1 +1,0 @@
-desc_fr=GRUB - Gestionnaire de d&#233;marrage

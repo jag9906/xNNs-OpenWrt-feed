@@ -27,7 +27,7 @@ define Package/dsniff
   SECTION:=xNN's Feed
   CATEGORY:=xNN's Feed
   SUBMENU:=Wifi-Pineapple
-  DEPENDS:=+libpcap +libnids +libopenssl +libgdbm
+  DEPENDS:=+libpcap +libnids +libopenssl +libgdbm +libnet-1.2.x
   TITLE:=A collection of tools for network auditing and penetration testing
   URL:=http://www.monkey.org/~dugsong/dsniff/
 endef
@@ -40,7 +40,7 @@ CONFIGURE_ARGS += \
 	--with-gdbm="$(STAGING_DIR)/opt" \
 	--with-libnids="$(STAGING_DIR)/opt" \
 	--with-libpcap="$(STAGING_DIR)/opt" \
-	--with-libnet="$(STAGING_DIR)/opt/lib/libnet-1.0.x" \
+	--with-libnet="$(STAGING_DIR)/opt/lib/libnet-1.2.x" \
 	--with-openssl="$(STAGING_DIR)/opt" \
 	--without-db \
 	--without-x

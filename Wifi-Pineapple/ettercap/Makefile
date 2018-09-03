@@ -25,7 +25,7 @@ define Package/ettercap
   SECTION:=xNN's Feed
   CATEGORY:=xNN's Feed
   SUBMENU:=Wifi-Pineapple
-  DEPENDS:=+libcurl +libpcap +libnet +libopenssl +libpcre +libncurses +libltdl +libpthread +zlib +libiconv-full
+  DEPENDS:=+libcurl +libpcap +libnet-1.2.x +libopenssl +libpcre +libncurses +libltdl +libpthread +zlib +libiconv-full
   TITLE:=Ettercap is a suite for man in the middle attacks on LAN.
   URL:=http://www.ettercap-project.org
 endef

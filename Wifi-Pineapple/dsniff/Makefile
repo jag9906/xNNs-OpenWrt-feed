@@ -27,7 +27,7 @@ define Package/dsniff
   SECTION:=xNN's Feed
   CATEGORY:=xNN's Feed
   SUBMENU:=Wifi-Pineapple
-  DEPENDS:=+libpcap +libnids +libopenssl +libgdbm +libnet-1.2.x
+  DEPENDS:=+libpcap +libnids +libopenssl +libgdbm
   TITLE:=A collection of tools for network auditing and penetration testing
   URL:=http://www.monkey.org/~dugsong/dsniff/
 endef
@@ -37,11 +37,11 @@ define Package/dsniff/description
 endef
 
 CONFIGURE_ARGS += \
-	--with-gdbm="$(STAGING_DIR)/opt" \
-	--with-libnids="$(STAGING_DIR)/opt" \
-	--with-libpcap="$(STAGING_DIR)/opt" \
-	--with-libnet="$(STAGING_DIR)/opt/lib/libnet-1.2.x" \
-	--with-openssl="$(STAGING_DIR)/opt" \
+	--with-gdbm="$(STAGING_DIR)/usr" \
+	--with-libnids="$(STAGING_DIR)/usr" \
+	--with-libpcap="$(STAGING_DIR)/usr" \
+	--with-libnet="$(STAGING_DIR)/usr/lib/libnet-1.0.x" \
+	--with-openssl="$(STAGING_DIR)/usr" \
 	--without-db \
 	--without-x
 
@@ -55,10 +55,10 @@ define Build/Compile
 endef
 
 define Package/dsniff/install
-	$(INSTALL_DIR) $(1)/opt/sbin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/opt/sbin/* $(1)/opt/sbin
-	$(INSTALL_DIR) $(1)/opt/lib
-	$(CP)  $(PKG_INSTALL_DIR)/opt/lib/* $(1)/opt/lib
+	$(INSTALL_DIR) $(1)/usr/sbin
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/* $(1)/usr/sbin
+	$(INSTALL_DIR) $(1)/usr/lib
+	$(CP)  $(PKG_INSTALL_DIR)/usr/lib/* $(1)/usr/lib
 endef
 
 $(eval $(call BuildPackage,dsniff))

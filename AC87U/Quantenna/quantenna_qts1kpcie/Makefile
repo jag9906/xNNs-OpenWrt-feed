@@ -1,4 +1,3 @@
-
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
@@ -19,10 +18,9 @@ define KernelPackage/qts1kpcie
   SECTION:=xNN's Feed
   CATEGORY:=xNN's Feed
   SUBMENU:=ASUS RT-AC87U
+  MENU:=1
   TITLE:=Quantenna QTS1000 Driver
   DEPENDS:=@PCI_SUPPORT +@DRIVER_WEXT_SUPPORT +qts1kpcierpc
-  MAINTAINER:="Patrick Martin thehairyrock@gmail.com"
-  URL:="http://www.downloads.netgear.com/files/GPL/R7500-and_qtn_gpl_src_V1.0.0.94.zip"
   FILES:= $(PKG_BUILD_DIR)/../quantenna/pcie2/host/arm/qdpc-host.ko
   AUTOLOAD:=$(call AutoProbe,qdpc-host)
 endef

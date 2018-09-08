@@ -1,20 +1,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=qts1kpcierpc
-ifdef LEDE_RELEASE
-WRT_FORK:=LEDE
-else
-WRT_FORK:=OPENWRT
-endif
-PKG_VERSION:=37.3.1.25-$(WRT_FORK)-1
+PKG_VERSION:=37.3.1.25-OPENWRT
 PKG_RELEASE:=1
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 
 PKG_SOURCE:=quantenna_sources.tar.gz
-PKG_SOURCE_VERSION:=b0e7e4f587e9a0b6655b13e2504ed0b6880354fc
-PKG_SOURCE_URL:=https://github.com/ILOVEPIE/qts1kpcie_wifi_driver/blob/$(PKG_SOURCE_VERSION)/quantenna_sources.tar.gz?raw=true
+PKG_SOURCE_VERSION:=1.0
+PKG_SOURCE_URL:=https://github.com/xNNism/xNNs-OpenWrt-feed/blob/Asus-RT-AC87U/AC87U/src/quantenna_sources.tar.gz?raw=true
 PKG_MD5SUM:=5dac6da69b7c8453c8cfb3d79468e360
-
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 

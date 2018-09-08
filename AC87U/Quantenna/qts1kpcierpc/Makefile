@@ -7,7 +7,7 @@ PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 
 PKG_SOURCE:=quantenna_sources.tar.gz
 PKG_SOURCE_VERSION:=1.0
-PKG_SOURCE_URL:=https://github.com/xNNism/xNNs-OpenWrt-feed/blob/Asus-RT-AC87U/AC87U/src/quantenna_sources.tar.gz?raw=true
+PKG_SOURCE_URL:=https://cdn.rawgit.com/xNNism/xNNs-OpenWrt-feed/Asus-RT-AC87U/AC87U/Quantenna/src/quantenna_sources.tar.gz
 PKG_MD5SUM:=5dac6da69b7c8453c8cfb3d79468e360
 
 include $(INCLUDE_DIR)/package.mk

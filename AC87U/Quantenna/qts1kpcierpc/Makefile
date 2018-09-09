@@ -17,7 +17,11 @@ define Package/qts1kpcierpc
   CATEGORY:=xNN's Feed
   SUBMENU:=ASUS RT-AC87U
   TITLE:=Quantenna QTS1000 Driver Utilities
+<<<<<<< HEAD
   DEPENDS:=+librpc +QUANTENNA_IWINFO_PLUGIN
+=======
+  DEPENDS:=+librpc +libiwinfo
+>>>>>>> 0fb6a8cae2ec8166fdc442ac35e76cc0ddc76e34
   MENU:=1
 endef
 

@@ -9,8 +9,9 @@ PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
 include $(INCLUDE_DIR)/package.mk
 
 define Package/qsdk-wifi-script
-  SECTION:=net
-  CATEGORY:=Network
+  SECTION:=xNN's Feed
+  CATEGORY:=xNN's Feed
+  SUBMENU:=AC87U
   TITLE:=qca-wifi scripts
   MAINTAINER:=Matthew McClintock <mmcclint@qca.qualcomm.com>
 endef

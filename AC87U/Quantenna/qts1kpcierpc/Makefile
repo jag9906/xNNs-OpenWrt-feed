@@ -8,7 +8,7 @@ PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 PKG_SOURCE:=quantenna_sources.tar.gz
 PKG_SOURCE_VERSION:=1.0
 PKG_SOURCE_URL:=https://cdn.rawgit.com/xNNism/xNNs-OpenWrt-feed/Asus-RT-AC87U/AC87U/Quantenna/src/
-PKG_MD5SUM:=5dac6da69b7c8453c8cfb3d79468e360
+PKG_MD5SUM:=152aabe66b4ca4e6ec658b37847b36d0
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -17,7 +17,7 @@ define Package/qts1kpcierpc
   CATEGORY:=xNN's Feed
   SUBMENU:=ASUS RT-AC87U
   TITLE:=Quantenna QTS1000 Driver Utilities
-  DEPENDS:=+librpc +QUANTENNA_IWINFO_PLUGIN:qts1kpcie_status_plugin
+  DEPENDS:=+librpc +QUANTENNA_IWINFO_PLUGIN
   MENU:=1
 endef
 

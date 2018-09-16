@@ -1,0 +1,170 @@
+mpm-itk 2.4.7-04, released 2016-02-14:
+
+  - Fix a compilation error on RHEL6; patch from Hans Kristian Rosbach.
+  - Add a new flag EnableCapabilities (default on), which can be disabled
+    to revert to the behavior in place before 2.4.2-02, which causes problems
+    when the filesystem in use does not respect capabilities (in particular
+    NFS).
+  - Update copyright to 2016.
+
+
+mpm-itk 2.4.7-03, released 2015-09-09:
+
+  - Fix an issue where connections would be attempted closed in the parent
+    instead of in the child. This would result in "Connection: close" not being
+    honored, and various odd effects with SSL keepalive in certain browsers.
+  - Correct a log message on AssignGroupIDExpr failure; patch from Roland Mas.
+  - Update copyright to 2015.
+
+
+mpm-itk 2.4.7-02, released 2014-03-01:
+
+  - In the seccomp.c filter, allow -1 as value in certain system calls,
+    as it means not to change the given value. Heavily based on patch
+    from Jason Rhineland.
+  - Update copyright to 2014.
+  - Fix the minimum required version number in the README.
+
+
+mpm-itk 2.4.7-01, released 2013-11-26:
+
+  - Note: This is almost identical to the previously released 2.4.6-01,
+    which was later retracted since Apache 2.4.6 did not contain the
+    required hook in question.
+  - Changed the htaccess hook to the form that was eventually included
+    in the Apache 2.4.7 release. This makes 2.4.7-01 the first version of
+    mpm-itk that can compile against an entirely unpatched Apache from
+    upstream, as Apache 2.4.7 includes all required patches for mpm-itk.
+  - Deleted the now obsolete patches/ directory.
+  - Updated copyright to 2013.
+
+
+mpm-itk 2.4.4-04, released 2013-02-28:
+
+  - Make seccomp.c compile on 64-bit x86. Based on a bug report
+    and patch from Hans Kristian Rosbach.
+  - Fix a few compiler warnings, including a bug that could cause
+    confusing behavior if fork() failed. Now failing fork() should
+    reliably result in 500 Internal Server Error being sent.
+
+
+mpm-itk 2.4.4-03, released 2012-12-31:
+
+  - Call ap_close_listeners() right after forking. This makes sure
+    a runaway/rogue process cannot keep the server from restarting,
+    or worse, call accept() on the listening socket.
+
+
+mpm-itk 2.4.4-02, released 2012-11-12:
+
+  - Change from being an MPM to being a regular module, like
+    mod_privileges is. This means we no longer need to duplicate
+    large parts of prefork's functionality; instead, the user needs
+    to run regular prefork and then load mpm-itk as a regular
+    module. Note that the name is unchanged, to prevent (or maybe cause)
+    further confusion.
+  - Add a configure script (via autoconf), so that HAVE_LIBCAP is set
+    if the system supports Linux capabilities. (2.2.4-01 always ran
+    with libcap disabled.)
+  - Remove a duplicate definition of the MaxClientsVhost directive
+    (harmless, but stylistically bad).
+  - Make the .htaccess check more efficient, by using access()
+    instead of actually opening the file.
+  - Actually use the post_perdir_config hook Apache has for us;
+    seemingly it has been unused for a very long time (we hooked into
+    header_parser instead, which is ever so slightly later, and does not
+    run for subrequests).
+  - Drop our extra privileges properly even if we have a vhost
+    with default uid/gid; keeping them was probably not what the
+    administrator intended.
+  - Rewrite the MaxClientsVHost handling so that it properly takes
+    into account the port the vhost is running on (unless the vhost
+    name is very long). This matches Apache's existing scoreboard format,
+    so we don't need to write into it ourselves anymore.
+
+
+mpm-itk 2.4.4-01, released 2012-11-11:
+
+ - Build completely out-of-tree; thanks to Jeff Trawick for spearheading
+   this on the Apache side. Note that this requires patches that
+   are not in any Apache 2.4 release right now, so you will either need to
+   apply the patches from the patches/ directory (that have been backported
+   to 2.4.3, from Subversion) or build against httpd trunk. (It is hoped, but
+   not guaranteed, that they will be part of the Apache 2.4.4 release.)
+   Also, note that the performance will be ever so slightly lower than the
+   in-tree versions, due to double statting of .htaccess files. I hope to
+   fix this eventually.
+
+   I've chosen to keep the version numbers consistent with the previous
+   release, indicating that this release will probably go along with
+   Apache 2.4.4, but assuming out-of-tree-builds will be the way forward 
+   in the 2.4 and newer series, Apache and mpm-itk version numbers will
+   probably diverge in the future.
+ - Add a version component ("mpm-itk/2.4.4-01") when the module is loaded,
+   so maybe over time we can get a better idea of how widespread mpm-itk
+   really is, and in what versions.
+
+apache2.4-mpm-itk 2.4.2-02, released 2012-08-05:
+
+ - Take advantage of two new patches from upstream to simplify our code:
+   First of all, our hook patch is now in Apache proper. Also, a new
+   ap_stat() hook allows us to do the close-connection-on-EACCES
+   handling with less patching into Apache itself (and in a future version,
+   we hope to be able to build entirely out-of-tree). Note that since none
+   of these patches are currently in a 2.4 release, we add them to the
+   beginning of the patch series for now, with a “00_upstream” prefix.
+ - If libcap is available, run as a normal user (the one specified in
+   httpd.conf) with extra capabilities, instead of restricted root.
+   Note that this does not really help a lot unless seccomp v2 is
+   available (see next point), as the process can still call setuid(0)
+   and then read or write files owned by root.
+ - If seccomp v2 is available (Linux 3.5.0 or newer), restrict
+   setuid() and setgid() calls (as well as seteuid() etc.), limiting
+   their range. By default, only 0 is excluded, but the administrator
+   can set a custom range with the LimitUIDRange and/or LimitGIDRange
+   directives (e.g. "LimitUIDRange 1000 2000" to allow only uids
+   from 1000 to 2000, inclusive). Note due to technical reasons,
+   setgroups() is _not_ restricted, so a rogue or runaway process
+   can still get add any group, including the root group, as supplementary.
+
+
+apache2.4-mpm-itk 2.4.2-01, released 2012-07-20:
+
+ - The patch is now against Apache 2.4.2 instead of Apache 2.4.1.
+   Note that even though the patch set will probably _apply_
+   to 2.4.1, it will not _work_ properly, due to a missing bugfix
+   that is no longer in the patch set.
+ - Support dynamic uid and gid selection through Apache 2.4's new
+   generic expression syntax. For instance, you can now use mod_rewrite
+   to do something like this:
+ 
+     RewriteEngine on
+     RewriteRule /~([a-z]+)/ - [E=ITKUID:$1]
+     AssignUserIDExpr %{reqenv:ITKUID}
+ 
+   which will cause e.g. /~sesse/foo to be run as the user “sesse”.
+   Obviously, you will need to exercise caution here to avoid opening
+   up new security holes.
+ - Fix another case where we should drop the connection instead
+   of returning 403; this time related to FollowSymLinks and directory
+   traversal. Bug report and patch by Anton Statutov.
+ - We now do clean_child_exit() instead of exit() after the request;
+   this runs pool cleanup hooks, fixing an issue with mod_qos
+   (reported by Daniele Orlandi). Note that this does not work
+   properly in the case where we hard-close connections due to uid
+   switch, so the fix is incomplete.
+ - Fixed a typo in a comment in itk.c, and removed some stray
+   trailing whitespace.
+ - Added CHANGES file for the 2.4 series.
+
+
+apache2.2-mpm-itk 2.4.1-pre01, released 2012-04-01:
+
+ - Backport the bug fix for bug 52904 from upstream, instead of
+   reverting the entire commit that caused it.
+ - Fix so AssignUserID can not be given in .htaccess files.
+
+
+apache2.2-mpm-itk 2.4.1-pre00, released 2012-03-14:
+
+  - First port of mpm-itk to Apache 2.4.

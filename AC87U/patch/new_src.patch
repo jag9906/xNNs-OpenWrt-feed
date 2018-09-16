@@ -1,0 +1,3126 @@
+From af732e7ded1bfaf71aec9c793688841a4f326554 Mon Sep 17 00:00:00 2001
+From: BrainSlayer <s.gottschall@dd-wrt.com>
+Date: Tue, 27 Jan 2015 19:30:00 +0000
+Subject: [PATCH] new sources
+
+git-svn-id: svn://svn.dd-wrt.com/DD-WRT@26046 52c4871e-980c-0410-b1e0-e73912ce01f8
+
+Former-commit-id: 3c0a00383b7b206acafa9d480dd3e3bff06038af
+---
+ .../linux-3.10/brcm/arm/shared/aisdram-ca9.c  | 1465 ++++++++++++++++
+ .../linux-3.10/brcm/arm/shared/hndfwd.c       | 1546 +++++++++++++++++
+ .../linux-3.10/brcm/arm/shared/pcie_core.c    |   80 +
+ 3 files changed, 3091 insertions(+)
+ create mode 100644 src/linux/universal/linux-3.10/brcm/arm/shared/aisdram-ca9.c
+ create mode 100644 src/linux/universal/linux-3.10/brcm/arm/shared/hndfwd.c
+ create mode 100644 src/linux/universal/linux-3.10/brcm/arm/shared/pcie_core.c
+
+diff --git a/src/linux/universal/linux-3.10/brcm/arm/shared/aisdram-ca9.c b/src/linux/universal/linux-3.10/brcm/arm/shared/aisdram-ca9.c
+new file mode 100644
+index 00000000000..30451a3e659
+--- /dev/null
++++ b/src/linux/universal/linux-3.10/brcm/arm/shared/aisdram-ca9.c
+@@ -0,0 +1,1465 @@
++/*
++ * DDR23 Denali contoller & DDRPHY init routines.
++ *
++ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
++ * 
++ * Permission to use, copy, modify, and/or distribute this software for any
++ * purpose with or without fee is hereby granted, provided that the above
++ * copyright notice and this permission notice appear in all copies.
++ * 
++ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
++ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
++ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
++ * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
++ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
++ * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
++ * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
++ *
++ * $Id$
++ */
++#include <typedefs.h>
++#include <bcmdefs.h>
++#include <osl.h>
++#include <bcmutils.h>
++#include <bcmdevs.h>
++#include <hndsoc.h>
++#include <siutils.h>
++#include <bcmnvram.h>
++#include <chipcommonb.h>
++#include <ddr_core.h>
++#include <hndcpu.h>
++
++#include <ddr40_phy_init.h>
++#include <shmoo_public.h>
++#include <bcm5301x_otp.h>
++
++
++#define DDR_DEFAULT_CLOCK	333
++#define DDR3_MIN_CLOCK		400
++
++#define OTPP_TRIES	10000000	/* # of tries for OTPP */
++#define DEFAULT_OTPCPU_CTRL0 0x00a00600
++
++extern void si_mem_setclock(si_t *sih, uint32 ddrclock);
++
++unsigned int ddr2_init_tab_400[] = {
++	0,	0x00000400,
++	1,	0x00000000,
++	3,	0x00000050,
++	4,	0x000000c8,
++	5,	0x0c050c02,
++	6,	0x04020405,
++	7,	0x05031015,
++	8,	0x03101504,
++	9,	0x05020305,
++	10,	0x03006d60,
++	11,	0x05020303,
++	12,	0x03006d60,
++	13,	0x01000003,
++	14,	0x05061001,
++	15,	0x000b0b06,
++	16,	0x030000c8,
++	17,	0x00a01212,
++	18,	0x060600a0,
++	19,	0x00000000,
++	20,	0x00003001,
++	21,	0x00300c2d,
++	22,	0x00050c2d,
++	23,	0x00000200,
++	24,	0x000a0002,
++	25,	0x0002000a,
++	26,	0x00020008,
++	27,	0x00c80008,
++	28,	0x00c80037,
++	29,	0x00000037,
++	30,	0x03000001,
++	31,	0x00030303,
++	32,	0x00000000,
++	35,	0x00000000,
++	36,	0x01000000,
++	37,	0x10000000,
++	38,	0x00100400,
++	39,	0x00000400,
++	40,	0x00000100,
++	41,	0x00000000,
++	42,	0x00000001,
++	43,	0x00000000,
++	44,	0x000a6300,
++	45,	0x00000004,
++	46,	0x00040a63,
++	47,	0x00000000,
++	48,	0x0a630000,
++	49,	0x00000004,
++	50,	0x00040a63,
++	51,	0x00000000,
++	52,	0x0a630000,
++	53,	0x00000004,
++	54,	0x00040a63,
++	55,	0x00000000,
++	56,	0x0a630000,
++	57,	0x00000004,
++	58,	0x00040a63,
++	59,	0x00000000,
++	60,	0x00000000,
++	61,	0x00010100,
++	62,	0x00000000,
++	63,	0x00000000,
++	64,	0x00000000,
++	65,	0x00000000,
++	66,	0x00000000,
++	67,	0x00000000,
++	68,	0x00000000,
++	69,	0x00000000,
++	70,	0x00000000,
++	71,	0x00000000,
++	72,	0x00000000,
++	73,	0x00000000,
++	74,	0x00000000,
++	75,	0x00000000,
++	76,	0x00000000,
++	77,	0x00000000,
++	78,	0x01000200,
++	79,	0x02000040,
++	80,	0x00400100,
++	81,	0x00000200,
++	82,	0x01030001,
++	83,	0x01ffff0a,
++	84,	0x01010101,
++	85,	0x03010101,
++	86,	0x01000003,
++	87,	0x0000010c,
++	88,	0x00010000,
++	89,	0x00000000,
++	90,	0x00000000,
++	91,	0x00000000,
++	92,	0x00000000,
++	93,	0x00000000,
++	94,	0x00000000,
++	95,	0x00000000,
++	96,	0x00000000,
++	97,	0x00000000,
++	98,	0x00000000,
++	99,	0x00000000,
++	100,	0x00000000,
++	101,	0x00000000,
++	102,	0x00000000,
++	103,	0x00000000,
++	104,	0x00000000,
++	105,	0x00000000,
++	106,	0x00000000,
++	107,	0x00000000,
++	108,	0x02020101,
++	109,	0x08080404,
++	110,	0x03020200,
++	111,	0x01000202,
++	112,	0x00000200,
++	113,	0x00000000,
++	114,	0x00000000,
++	115,	0x00000000,
++	116,	0x19000000,
++	117,	0x00000028,
++	118,	0x00000000,
++	119,	0x00010001,
++	120,	0x00010001,
++	121,	0x00010001,
++	122,	0x00010001,
++	123,	0x00010001,
++	124,	0x00000000,
++	125,	0x00000000,
++	126,	0x00000000,
++	127,	0x00000000,
++	128,	0x001c1c00,
++	129,	0x1c1c0001,
++	130,	0x00000001,
++	131,	0x00000000,
++	132,	0x00000000,
++	133,	0x00011c1c,
++	134,	0x00011c1c,
++	135,	0x00000000,
++	136,	0x00000000,
++	137,	0x001c1c00,
++	138,	0x1c1c0001,
++	139,	0x00000001,
++	140,	0x00000000,
++	141,	0x00000000,
++	142,	0x00011c1c,
++	143,	0x00011c1c,
++	144,	0x00000000,
++	145,	0x00000000,
++	146,	0x001c1c00,
++	147,	0x1c1c0001,
++	148,	0xffff0001,
++	149,	0x00ffff00,
++	150,	0x0000ffff,
++	151,	0x00000000,
++	152,	0x03030303,
++	153,	0x03030303,
++	156,	0x02006400,
++	157,	0x02020202,
++	158,	0x02020202,
++	160,	0x01020202,
++	161,	0x01010064,
++	162,	0x01010101,
++	163,	0x01010101,
++	165,	0x00020101,
++	166,	0x00000064,
++	167,	0x00000000,
++	168,	0x000a0a00,
++	169,	0x0c2d0000,
++	170,	0x02000200,
++	171,	0x02000200,
++	172,	0x00000c2d,
++	173,	0x00003ce1,
++	174,	0x0c2d0505,
++	175,	0x02000200,
++	176,	0x02000200,
++	177,	0x00000c2d,
++	178,	0x00003ce1,
++	179,	0x02020505,
++	180,	0x80000100,
++	181,	0x04070303,
++	182,	0x0000000a,
++	183,	0x00000000,
++	184,	0x00000000,
++	185,	0x0010ffff,
++	186,	0x16070303,
++	187,	0x0000000f,
++	188,	0x00000000,
++	189,	0x00000000,
++	190,	0x00000000,
++	191,	0x00000000,
++	192,	0x00000000,
++	193,	0x00000000,
++	194,	0x00000204,
++	195,	0x00000000,
++	196,	0x00000000,
++	197,	0x00000000,
++	198,	0x00000000,
++	199,	0x00000000,
++	200,	0x00000000,
++	201,	0x00000000,
++	202,	0x00000050,
++	203,	0x00000050,
++	204,	0x00000000,
++	205,	0x00000040,
++	206,	0x01030301,
++	207,	0x00000001,
++	0xffffffff
++};
++
++#ifdef _UNUSED_
++unsigned int ddr3_init_tab[] = {
++	14,	0x05051001,
++	15,	0x000a0a05,
++	36,	0x01000000,
++	37,	0x10000000,
++	38,	0x00100400,
++	39,	0x00000400,
++	40,	0x00000100,
++	42,	0x00000001,
++	61,	0x00010100,
++	78,	0x01000200,
++	79,	0x02000040,
++	80,	0x00400100,
++	81,	0x00000200,
++	83,	0x01ffff0a,
++	84,	0x01010101,
++	85,	0x03010101,
++	86,	0x01000003,
++	87,	0x0000010c,
++	88,	0x00010000,
++	112,	0x00000200,
++	116,	0x19000000,
++	117,	0x00000028,
++	119,	0x00010001,
++	120,	0x00010001,
++	121,	0x00010001,
++	122,	0x00010001,
++	123,	0x00010001,
++	130,	0x00000001,
++	139,	0x00000001,
++	148,	0xffff0001,
++	149,	0x00ffff00,
++	150,	0x0000ffff,
++	152,	0x03030303,
++	153,	0x03030303,
++	156,	0x02006400,
++	157,	0x02020202,
++	158,	0x02020202,
++	160,	0x01020202,
++	161,	0x01010064,
++	162,	0x01010101,
++	163,	0x01010101,
++	165,	0x00020101,
++	166,	0x00000064,
++	168,	0x000a0a00,
++	170,	0x02000200,
++	171,	0x02000200,
++	175,	0x02000200,
++	176,	0x02000200,
++	180,	0x80000100,
++	181,	0x04070303,
++	182,	0x0000000a,
++	185,	0x0010ffff,
++	187,	0x0000000f,
++	194,	0x00000204,
++	205,	0x00000040,
++	0xffffffff
++};
++
++unsigned int ddr3_init_tab_666[] = {
++	0,	0x00000600,
++	3,	0x0001046b,
++	4,	0x00028b0b,
++	5,	0x0c050c00,
++	6,	0x04040405,
++	7,	0x05040e14,
++	8,	0x040e1404,
++	9,	0x0c040405,
++	10,	0x03005b68,
++	11,	0x0c040404,
++	12,	0x03005b68,
++	13,	0x01000004,
++	16,	0x03000200,
++	17,	0x00000f0f,
++	18,	0x05050000,
++	20,	0x00007801,
++	21,	0x00780a20,
++	22,	0x00050a20,
++	23,	0x00000300,
++	24,	0x000a0003,
++	25,	0x0000000a,
++	27,	0x02000000,
++	28,	0x0200005a,
++	29,	0x0000005a,
++	30,	0x05000001,
++	31,	0x00050505,
++	44,	0x00022000,
++	45,	0x00000046,
++	46,	0x00460210,
++	48,	0x02100000,
++	49,	0x00000046,
++	50,	0x00460210,
++	52,	0x02100000,
++	53,	0x00000046,
++	54,	0x00460210,
++	56,	0x02100000,
++	57,	0x00000046,
++	58,	0x00460210,
++	82,	0x01010001,
++	108,	0x02040108,
++	109,	0x08010402,
++	110,	0x02020202,
++	111,	0x01000201,
++	128,	0x00212100,
++	129,	0x21210001,
++	133,	0x00012121,
++	134,	0x00012121,
++	137,	0x00212100,
++	138,	0x21210001,
++	142,	0x00012121,
++	143,	0x00012121,
++	146,	0x00212100,
++	147,	0x21210001,
++	169,	0x0a200000,
++	172,	0x00000a20,
++	173,	0x000032a0,
++	174,	0x0a200505,
++	177,	0x00000a20,
++	178,	0x000032a0,
++	179,	0x02020505,
++	186,	0x16070303,
++	202,	0x00000004,
++	203,	0x00000004,
++	206,	0x01040401,
++	207,	0x00000001,
++	0xffffffff
++};
++
++unsigned int ddr3_init_tab_1333[] = {
++	0,	0x00000600,
++	1,	0x00000000,
++	3,	0x00000086,
++	4,	0x0000014e,
++	5,	0x12071200,
++	6,	0x05040407,
++	7,	0x09051821,
++	8,	0x05182105,
++	9,	0x0c040509,
++	10,	0x0400b6d0,
++	11,	0x0c040504,
++	12,	0x0400b6d0,
++	13,	0x01000004,
++	14,	0x090a1001,
++	15,	0x0013130a,
++	16,	0x03000200,
++	17,	0x00001e1e,
++	18,	0x09090000,
++	19,	0x00000000,
++	20,	0x0000ea01,
++	21,	0x00ea1448,
++	22,	0x00051448,
++	23,	0x00000400,
++	24,	0x00100004,
++	25,	0x00000010,
++	26,	0x00000000,
++	27,	0x02000000,
++	28,	0x020000f0,
++	29,	0x000000f0,
++	30,	0x07000001,
++	31,	0x00070707,
++	32,	0x00000000,
++	35,	0x00000000,
++	36,	0x01000000,
++	37,	0x10000000,
++	38,	0x00100400,
++	39,	0x00000400,
++	40,	0x00000100,
++	41,	0x00000000,
++	42,	0x00000001,
++	43,	0x00000000,
++	44,	0x000a5000,
++	45,	0x00100046,
++	46,	0x00460a50,
++	47,	0x00000010,
++	48,	0x0a500000,
++	49,	0x00100046,
++	50,	0x00460a50,
++	51,	0x00000010,
++	52,	0x0a500000,
++	53,	0x00100046,
++	54,	0x00460a50,
++	55,	0x00000010,
++	56,	0x0a500000,
++	57,	0x00100046,
++	58,	0x00460a50,
++	59,	0x00000010,
++	60,	0x00000000,
++	61,	0x00010100,
++	62,	0x00000000,
++	63,	0x00000000,
++	64,	0x00000000,
++	65,	0x00000000,
++	66,	0x00000000,
++	67,	0x00000000,
++	68,	0x00000000,
++	69,	0x00000000,
++	70,	0x00000000,
++	71,	0x00000000,
++	72,	0x00000000,
++	73,	0x00000000,
++	74,	0x00000000,
++	75,	0x00000000,
++	76,	0x00000000,
++	77,	0x00000000,
++	78,	0x01000200,
++	79,	0x02000040,
++	80,	0x00400100,
++	81,	0x00000200,
++	82,	0x01000001,
++	83,	0x01ffff0a,
++	84,	0x01010101,
++	85,	0x03010101,
++	86,	0x01000003,
++	87,	0x0000010c,
++	88,	0x00010000,
++	89,	0x00000000,
++	90,	0x00000000,
++	91,	0x00000000,
++	92,	0x00000000,
++	93,	0x00000000,
++	94,	0x00000000,
++	95,	0x00000000,
++	96,	0x00000000,
++	97,	0x00000000,
++	98,	0x00000000,
++	99,	0x00000000,
++	100,	0x00000000,
++	101,	0x00000000,
++	102,	0x00000000,
++	103,	0x00000000,
++	104,	0x00000000,
++	105,	0x00000000,
++	106,	0x00000000,
++	107,	0x00000000,
++	108,	0x02040108,
++	109,	0x08010402,
++	110,	0x02020202,
++	111,	0x01000201,
++	112,	0x00000200,
++	113,	0x00000000,
++	114,	0x00000000,
++	115,	0x00000000,
++	116,	0x19000000,
++	117,	0x00000028,
++	118,	0x00000000,
++	119,	0x00010001,
++	120,	0x00010001,
++	121,	0x00010001,
++	122,	0x00010001,
++	123,	0x00010001,
++	124,	0x00000000,
++	125,	0x00000000,
++	126,	0x00000000,
++	127,	0x00000000,
++	128,	0x00232300,
++	129,	0x23230001,
++	130,	0x00000001,
++	131,	0x00000000,
++	132,	0x00000000,
++	133,	0x00012323,
++	134,	0x00012323,
++	135,	0x00000000,
++	136,	0x00000000,
++	137,	0x00232300,
++	138,	0x23230001,
++	139,	0x00000001,
++	140,	0x00000000,
++	141,	0x00000000,
++	142,	0x00012323,
++	143,	0x00012323,
++	144,	0x00000000,
++	145,	0x00000000,
++	146,	0x00232300,
++	147,	0x23230001,
++	148,	0xffff0001,
++	149,	0x00ffff00,
++	150,	0x0000ffff,
++	151,	0x00000000,
++	152,	0x03030303,
++	153,	0x03030303,
++	156,	0x02006400,
++	157,	0x02020202,
++	158,	0x02020202,
++	160,	0x01020202,
++	161,	0x01010064,
++	162,	0x01010101,
++	163,	0x01010101,
++	165,	0x00020101,
++	166,	0x00000064,
++	167,	0x00000000,
++	168,	0x000b0b00,
++	169,	0x14480000,
++	170,	0x02000200,
++	171,	0x02000200,
++	172,	0x00001448,
++	173,	0x00006568,
++	174,	0x14480708,
++	175,	0x02000200,
++	176,	0x02000200,
++	177,	0x00001448,
++	178,	0x00006568,
++	179,	0x02020708,
++	180,	0x80000100,
++	181,	0x04070303,
++	182,	0x0000000a,
++	183,	0x00000000,
++	184,	0x00000000,
++	185,	0x0010ffff,
++	186,	0x1a070303,
++	187,	0x0000000f,
++	188,	0x00000000,
++	189,	0x00000000,
++	190,	0x00000000,
++	191,	0x00000000,
++	192,	0x00000000,
++	193,	0x00000000,
++	194,	0x00000204,
++	195,	0x00000000,
++	196,	0x00000000,
++	197,	0x00000000,
++	198,	0x00000000,
++	199,	0x00000000,
++	200,	0x00000000,
++	201,	0x00000000,
++	202,	0x00000007,
++	203,	0x00000007,
++	204,	0x00000000,
++	205,	0x00000040,
++	206,	0x00060601,
++	207,	0x00000000,
++	0xffffffff
++};
++#endif /* _UNUSED_ */
++
++unsigned int ddr3_init_tab_1600[] = {
++	0,	0x00000600,
++	1,	0x00000000,
++	3,	0x000000a0,
++	4,	0x00061a80,
++	5,	0x16081600,
++	6,	0x06040408,
++	7,	0x0b061c27,
++	8,	0x061c2706,
++	9,	0x0c04060b,
++	10,	0x0400db60,
++	11,	0x0c040604,
++	12,	0x0400db60,
++	13,	0x01000004,
++	14,	0x0b0c1001,
++	15,	0x0017170c,
++	16,	0x03000200,
++	17,	0x00002020,
++	18,	0x0b0b0000,
++	19,	0x00000000,
++	20,	0x00011801,
++	21,	0x01181858,
++	22,	0x00051858,
++	23,	0x00000500,
++	24,	0x00140005,
++	25,	0x00000014,
++	26,	0x00000000,
++	27,	0x02000000,
++	28,	0x02000120,
++	29,	0x00000120,
++	30,	0x08000001,
++	31,	0x00080808,
++	32,	0x00000000,
++	35,	0x00000000,
++	36,	0x01000000,
++	37,	0x10000000,
++	38,	0x00100400,
++	39,	0x00000400,
++	40,	0x00000100,
++	41,	0x00000000,
++	42,	0x00000001,
++	43,	0x00000000,
++	44,	0x000c7000,
++	45,	0x00180046,
++	46,	0x00460c70,
++	47,	0x00000018,
++	48,	0x0c700000,
++	49,	0x00180046,
++	50,	0x00460c70,
++	51,	0x00000018,
++	52,	0x0c700000,
++	53,	0x00180046,
++	54,	0x00460c70,
++	55,	0x00000018,
++	56,	0x0c700000,
++	57,	0x00180046,
++	58,	0x00460c70,
++	59,	0x00000018,
++	60,	0x00000000,
++	61,	0x00010100,
++	62,	0x00000000,
++	63,	0x00000000,
++	64,	0x00000000,
++	65,	0x00000000,
++	66,	0x00000000,
++	67,	0x00000000,
++	68,	0x00000000,
++	69,	0x00000000,
++	70,	0x00000000,
++	71,	0x00000000,
++	72,	0x00000000,
++	73,	0x00000000,
++	74,	0x00000000,
++	75,	0x00000000,
++	76,	0x00000000,
++	77,	0x00000000,
++	78,	0x01000200,
++	79,	0x02000040,
++	80,	0x00400100,
++	81,	0x00000200,
++	82,	0x01000001,
++	83,	0x01ffff0a,
++	84,	0x01010101,
++	85,	0x03010101,
++	86,	0x01000003,
++	87,	0x0000010c,
++	88,	0x00010000,
++	89,	0x00000000,
++	90,	0x00000000,
++	91,	0x00000000,
++	92,	0x00000000,
++	93,	0x00000000,
++	94,	0x00000000,
++	95,	0x00000000,
++	96,	0x00000000,
++	97,	0x00000000,
++	98,	0x00000000,
++	99,	0x00000000,
++	100,	0x00000000,
++	101,	0x00000000,
++	102,	0x00000000,
++	103,	0x00000000,
++	104,	0x00000000,
++	105,	0x00000000,
++	106,	0x00000000,
++	107,	0x00000000,
++	108,	0x02040108,
++	109,	0x08010402,
++	110,	0x02020202,
++	111,	0x01000201,
++	112,	0x00000200,
++	113,	0x00000000,
++	114,	0x00000000,
++	115,	0x00000000,
++	116,	0x19000000,
++	117,	0x00000028,
++	118,	0x00000000,
++	119,	0x00010001,
++	120,	0x00010001,
++	121,	0x00010001,
++	122,	0x00010001,
++	123,	0x00010001,
++	124,	0x00000000,
++	125,	0x00000000,
++	126,	0x00000000,
++	127,	0x00000000,
++	128,	0x00232300,
++	129,	0x23230001,
++	130,	0x00000001,
++	131,	0x00000000,
++	132,	0x00000000,
++	133,	0x00012323,
++	134,	0x00012323,
++	135,	0x00000000,
++	136,	0x00000000,
++	137,	0x00232300,
++	138,	0x23230001,
++	139,	0x00000001,
++	140,	0x00000000,
++	141,	0x00000000,
++	142,	0x00012323,
++	143,	0x00012323,
++	144,	0x00000000,
++	145,	0x00000000,
++	146,	0x00232300,
++	147,	0x23230001,
++	148,	0xffff0001,
++	149,	0x00ffff00,
++	150,	0x0000ffff,
++	151,	0x00000000,
++	152,	0x03030303,
++	153,	0x03030303,
++	156,	0x02006400,
++	157,	0x02020202,
++	158,	0x02020202,
++	160,	0x01020202,
++	161,	0x01010064,
++	162,	0x01010101,
++	163,	0x01010101,
++	165,	0x00020101,
++	166,	0x00000064,
++	167,	0x00000000,
++	168,	0x000b0b00,
++	169,	0x18580000,
++	170,	0x02000200,
++	171,	0x02000200,
++	172,	0x00001858,
++	173,	0x000079b8,
++	174,	0x1858080a,
++	175,	0x02000200,
++	176,	0x02000200,
++	177,	0x00001858,
++	178,	0x000079b8,
++	179,	0x0202080a,
++	180,	0x80000100,
++	181,	0x04070303,
++	182,	0x0000000a,
++	183,	0x00000000,
++	184,	0x00000000,
++	185,	0x0010ffff,
++	186,	0x1c070303,
++	187,	0x0000000f,
++	188,	0x00000000,
++	189,	0x00000000,
++	190,	0x00000000,
++	191,	0x00000000,
++	192,	0x00000000,
++	193,	0x00000000,
++	194,	0x00000204,
++	195,	0x00000000,
++	196,	0x00000000,
++	197,	0x00000000,
++	198,	0x00000000,
++	199,	0x00000000,
++	200,	0x00000000,
++	201,	0x00000000,
++	202,	0x00000008,
++	203,	0x00000008,
++	204,	0x00000000,
++	205,	0x00000040,
++	206,	0x00070701,
++	207,	0x00000000,
++	0xffffffff
++};
++
++
++static void
++ddr_regs_init(si_t *sih, ddrcregs_t *ddr, unsigned int ddr_table[])
++{
++	osl_t *osh;
++	uint32 reg_num, reg_val;
++	int idx = 0;
++
++	osh = si_osh(sih);
++	while ((reg_num = ddr_table[idx++]) != DDR_TABLE_END) {
++		reg_val = ddr_table[idx++];
++		W_REG(osh, &ddr->control[reg_num], reg_val);
++	}
++}
++
++int rewrite_mode_registers(void *sih)
++{
++	osl_t *osh;
++	ddrcregs_t *ddr;
++	int nRet = 0;
++	int j = 100;
++	uint32 val;
++
++	osh = si_osh((si_t *)sih);
++	ddr = (ddrcregs_t *)si_setcore((si_t *)sih, NS_DDR23_CORE_ID, 0);
++	if (!ddr) {
++		nRet = 1;
++		goto out;
++	}
++
++	val = R_REG(osh, &ddr->control[89]);
++	val &= ~(1 << 18);
++	W_REG(osh, &ddr->control[89], val);
++
++	/* Set mode register for MR0, MR1, MR2 and MR3 write for all chip selects */
++	val = (1 << 17) | (1 << 24) | (1 << 25);
++	W_REG(osh, &ddr->control[43], val);
++
++	/* Trigger Mode Register Write(MRW) sequence */
++	val |= (1 << 25);
++	W_REG(osh, &ddr->control[43], val);
++
++	do {
++		if (R_REG(osh, &ddr->control[89]) & (1 << 18)) {
++			break;
++		}
++		--j;
++	} while (j);
++
++	if (j == 0 && (R_REG(osh, &ddr->control[89]) & (1 << 18)) == 0) {
++		printf("Error: DRAM mode registers write failed\n");
++		nRet = 1;
++	};
++out:
++	return nRet;
++}
++
++static int
++_check_cmd_done(void)
++{
++	unsigned int k;
++	uint32 st;
++
++	for (k = 0; k < OTPP_TRIES; k++) {
++		st = R_REG(NULL, (uint32 *)DMU_OTP_CPU_STS);
++		if (st & OTPCPU_STS_CMD_DONE_MASK) {
++		    break;
++		}
++	}
++	if (k >= OTPP_TRIES) {
++		printf("%s: %d _check_cmd_done: %08x\n", __FUNCTION__, __LINE__, k);
++		return -1;
++	}
++	return 0;
++}
++
++
++static int
++_issue_read(unsigned int row, uint32 *val)
++{
++	uint32 ctrl1, ctrl0;
++	uint32 start;
++	uint32 cmd;
++	uint32 fuse;
++	uint32 cof;
++	uint32 prog_en;
++	uint32 mode;
++	int rv;
++
++
++	W_REG(NULL, (uint32 *)DMU_OTP_CPU_ADDR, row);
++
++	start = (1 << OTPCPU_CTRL1_START_SHIFT) & OTPCPU_CTRL1_START_MASK;
++	cmd = (OTPCPU_CMD_READ << OTPCPU_CTRL1_CMD_SHIFT) & OTPCPU_CTRL1_CMD_MASK;
++	fuse = (1 << OTPCPU_CTRL1_2XFUSE_SHIFT) & OTPCPU_CTRL1_2XFUSE_MASK;
++	cof = (2 << OTPCPU_CTRL1_COF_SHIFT) & OTPCPU_CTRL1_COF_MASK;
++	prog_en = (0 << OTPCPU_CTRL1_PROG_EN_SHIFT) & OTPCPU_CTRL1_PROG_EN_MASK;
++	mode = (1 << OTPCPU_CTRL1_ACCESS_MODE_SHIFT) & OTPCPU_CTRL1_ACCESS_MODE_MASK;
++
++	ctrl1 = cmd;
++	ctrl1 |= fuse;
++	ctrl1 |= cof;
++	ctrl1 |= prog_en;
++	ctrl1 |= mode;
++
++	ctrl1 |= start;
++	W_REG(NULL, (uint32 *)DMU_OTP_CPU_CTRL1, ctrl1);
++	ctrl0 = DEFAULT_OTPCPU_CTRL0;
++	W_REG(NULL, (uint32 *)DMU_OTP_CPU_CTRL0, ctrl0);
++
++	/* Check if cmd_done bit is asserted */
++	rv = _check_cmd_done();
++	if (rv) {
++		printf("%s: %d _check_cmd_done: %08x\n", __FUNCTION__, __LINE__, rv);
++	    return -1;
++	}
++
++	*val = R_REG(NULL, (uint32 *)DMU_OTP_CPU_READ_DATA);
++
++	return 0;
++}
++
++
++static int
++_issue_prog_dis(void)
++{
++	uint32 ctrl1, ctrl0;
++	uint32 start;
++	uint32 cmd;
++	uint32 fuse;
++	uint32 cof;
++	uint32 prog_en;
++	uint32 mode;
++	int rv;
++
++	W_REG(NULL, (uint32 *)DMU_OTP_CPU_ADDR, 0);
++
++	start = (1 << OTPCPU_CTRL1_START_SHIFT) & OTPCPU_CTRL1_START_MASK;
++	cmd = (OTPCPU_CMD_PROG_DIS << OTPCPU_CTRL1_CMD_SHIFT) & OTPCPU_CTRL1_CMD_MASK;
++	fuse = (1 << OTPCPU_CTRL1_2XFUSE_SHIFT) & OTPCPU_CTRL1_2XFUSE_MASK;
++	cof = (1 << OTPCPU_CTRL1_COF_SHIFT) & OTPCPU_CTRL1_COF_MASK;
++	prog_en = (1 << OTPCPU_CTRL1_PROG_EN_SHIFT) & OTPCPU_CTRL1_PROG_EN_MASK;
++	mode = (2 << OTPCPU_CTRL1_ACCESS_MODE_SHIFT) & OTPCPU_CTRL1_ACCESS_MODE_MASK;
++
++	ctrl1 = cmd;
++	ctrl1 |= fuse;
++	ctrl1 |= cof;
++	ctrl1 |= prog_en;
++	ctrl1 |= mode;
++
++	ctrl1 |= start;
++	W_REG(NULL, (uint32 *)DMU_OTP_CPU_CTRL1, ctrl1);
++	ctrl0 = DEFAULT_OTPCPU_CTRL0;
++	W_REG(NULL, (uint32 *)DMU_OTP_CPU_CTRL0, ctrl0);
++
++	/* Check if cmd_done bit is asserted */
++	rv = _check_cmd_done();
++	if (rv) {
++		printf("%s: %d _check_cmd_done: %08x\n", __FUNCTION__, __LINE__, rv);
++		return -1;
++	}
++
++	ctrl1 &= ~start;
++	W_REG(NULL, (uint32 *)DMU_OTP_CPU_CTRL1, ctrl1);
++	W_REG(NULL, (uint32 *)DMU_OTP_CPU_CTRL0, ctrl0);
++
++	return 0;
++}
++
++int
++bcm5301x_otp_read_dword(unsigned int wn, uint32 *data)
++{
++	uint32 cpu_cfg;
++	int rv;
++
++	/* Check if CPU mode is enabled */
++	cpu_cfg = R_REG(NULL, (uint32 *)DMU_OTP_CPU_CONFIG);
++	if (!(cpu_cfg & OTPCPU_CFG_CPU_MODE_MASK)) {
++		cpu_cfg |= ((1 << OTPCPU_CFG_CPU_MODE_SHIFT) & OTPCPU_CFG_CPU_MODE_MASK);
++		W_REG(NULL, (uint32 *)DMU_OTP_CPU_CONFIG, cpu_cfg);
++	}
++	cpu_cfg = R_REG(NULL, (uint32 *)DMU_OTP_CPU_CONFIG);
++
++	/* Issue ProgDisable command */
++	rv = _issue_prog_dis();
++	if (rv) {
++		printf("%s: %d _issue_prog_dis failed: %d\n", __FUNCTION__, __LINE__, rv);
++		return -1;
++	}
++
++	/* Issue ReadWord command */
++	rv = _issue_read(wn, data);
++	if (rv) {
++		printf("%s: %d _issue_read failed: %d\n", __FUNCTION__, __LINE__, rv);
++		return -1;
++	}
++
++	return 0;
++}
++
++int
++Program_Digital_Core_Power_Voltage(si_t *sih)
++{
++#define ROW_NUMBER 0x8
++#define MDC_DIV 0x8
++#define DIGITAL_POWER_CORE_VOLTAGE_1V		0x520E0020
++#define DIGITAL_POWER_CORE_VOLTAGE_POINT_975V	0x520E0018
++#define DIGITAL_POWER_CORE_VOLTAGE_POINT_9625V	0x520E0014
++#define DIGITAL_POWER_CORE_VOLTAGE_POINT_95V	0x520E0010
++#define DIGITAL_POWER_CORE_VOLTAGE_POINT_9375V	0x520E000C
++#define DIGITAL_POWER_CORE_VOLTAGE_POINT_925V	0x520E0008
++#define DIGITAL_POWER_CORE_VOLTAGE_POINT_9125V	0x520E0004
++#define DIGITAL_POWER_CORE_VOLTAGE_POINT_9V	0x520E0000
++#define AVS_CODE_RS 17
++#define AVS_CODE_MASK 7
++
++	osl_t *osh;
++	chipcommonbregs_t *chipcb;
++	uint32 avs_code = 0;
++	int retval = 0;
++	char *vol_str = NULL;
++
++	osh = si_osh(sih);
++	chipcb = (chipcommonbregs_t *)si_setcore(sih, NS_CCB_CORE_ID, 0);
++	if (chipcb == NULL) {
++		retval = -1;
++		printf("%s: %d chipcb null %d\n", __FUNCTION__, __LINE__, retval);
++		return retval;
++	}
++
++	if (CHIPID(sih->chip) == BCM4707_CHIP_ID || CHIPID(sih->chip) == BCM47094_CHIP_ID) {
++		if (sih->chippkg != BCM4709_PKG_ID) {
++			/* access internal regulator phy by setting the MDC/MDIO
++			 * bus frequency to 125/8
++			 */
++			W_REG(osh, &chipcb->pcu_mdio_mgt, MDC_DIV);
++			udelay(500);
++			/* this is 0.9 V */
++			W_REG(osh, &chipcb->pcu_mdio_cmd, DIGITAL_POWER_CORE_VOLTAGE_POINT_9375V);
++			printf("Digital core power voltage set to 0.9375V\n");
++			return retval;
++		}
++	}
++
++	retval = bcm5301x_otp_read_dword(ROW_NUMBER, &avs_code);
++	if (retval != 0) {
++		printf("%s: %d failed bcm5301x_otp_read_dword: %d\n",
++			__FUNCTION__, __LINE__, retval);
++		return retval;
++	}
++
++
++	/* bits 17 - 19 is the avs code */
++	avs_code = (avs_code >> AVS_CODE_RS) & AVS_CODE_MASK;
++
++	/* access internal regulator phy by setting the MDC/MDIO bus frequency to 125/8 */
++	W_REG(osh, &chipcb->pcu_mdio_mgt, MDC_DIV);
++	udelay(500);
++
++	switch (avs_code) {
++	case 0:
++		/* this is 1 V */
++		W_REG(osh, &chipcb->pcu_mdio_cmd, DIGITAL_POWER_CORE_VOLTAGE_1V);
++		vol_str = "1.0";
++		break;
++	case 1:
++		/* this is 0.975 V */
++		W_REG(osh, &chipcb->pcu_mdio_cmd, DIGITAL_POWER_CORE_VOLTAGE_POINT_975V);
++		vol_str = "0.975";
++		break;
++	case 2:
++		/* this is 0.9625 V */
++		W_REG(osh, &chipcb->pcu_mdio_cmd, DIGITAL_POWER_CORE_VOLTAGE_POINT_9625V);
++		vol_str = "0.9625";
++		break;
++	case 3:
++		/* this is 0.95 V */
++		W_REG(osh, &chipcb->pcu_mdio_cmd, DIGITAL_POWER_CORE_VOLTAGE_POINT_95V);
++		vol_str = "0.95";
++		break;
++	case 4:
++		/* this is 0.9375 V */
++		W_REG(osh, &chipcb->pcu_mdio_cmd, DIGITAL_POWER_CORE_VOLTAGE_POINT_9375V);
++		vol_str = "0.9375";
++		break;
++	case 5:
++		/* this is 0.925 V */
++		W_REG(osh, &chipcb->pcu_mdio_cmd, DIGITAL_POWER_CORE_VOLTAGE_POINT_925V);
++		vol_str = "0.925";
++		break;
++	case 6:
++		/* this is 0.9125 V */
++		W_REG(osh, &chipcb->pcu_mdio_cmd, DIGITAL_POWER_CORE_VOLTAGE_POINT_9125V);
++		vol_str = "0.9125";
++		break;
++	case 7:
++		/* this is 0.9 V */
++		W_REG(osh, &chipcb->pcu_mdio_cmd, DIGITAL_POWER_CORE_VOLTAGE_POINT_9V);
++		vol_str = "0.9";
++		break;
++	default:
++		printf("%s: %d unrecognized avs_code %d\n", __FUNCTION__, __LINE__, avs_code);
++		break;
++	}
++
++	if (vol_str)
++		printf("Digital core power voltage set to %sV\n", vol_str);
++
++	return retval;
++}
++
++void
++c_ddr_init(unsigned long ra)
++{
++	si_t *sih;
++	osl_t *osh;
++	void *regs;
++	int ddrtype_ddr3 = 0;
++	int bootdev;
++	struct nvram_header *nvh = NULL;
++	uintptr flbase;
++	uint32 off, sdram_config, sdram_ncdl;
++	uint32 config_refresh, sdram_refresh;
++	ddrcregs_t *ddr;
++	chipcommonbregs_t *chipcb;
++	uint32 val, val1;
++	int i;
++	uint32 ddrclock = DDR_DEFAULT_CLOCK, clkval;
++	uint32 params, connect, ovride, status;
++	uint32 wire_dly[4] = {0};
++
++
++	/* Basic initialization */
++	sih = (si_t *)osl_init();
++	osh = si_osh(sih);
++#ifdef BCMDBG
++	printf("\n==================== CFE Boot Loader ====================\n");
++#endif
++
++	Program_Digital_Core_Power_Voltage(sih);
++
++	regs = (void *)si_setcore(sih, NS_DDR23_CORE_ID, 0);
++	if (regs) {
++		ddrtype_ddr3 = ((si_core_sflags(sih, 0, 0) & DDR_TYPE_MASK) == DDR_STAT_DDR3);
++	}
++	if (ddrtype_ddr3) {
++		chipcb = (chipcommonbregs_t *)si_setcore(sih, NS_CCB_CORE_ID, 0);
++		if (chipcb) {
++			/* Configure DDR voltage to 1.5V */
++			val = R_REG(osh, &chipcb->pcu_1v8_1v5_vregcntl);
++			val = (val & ~PCU_VOLTAGE_SELECT_MASK) | PCU_VOLTAGE_SELECT_1V5;
++			W_REG(osh, &chipcb->pcu_1v8_1v5_vregcntl, val);
++
++			/* Enable LDO voltage output */
++			val = PCU_AOPC_PWRDIS_SEL;
++			W_REG(osh, &chipcb->pcu_aopc_control, val);
++			val |= PCU_AOPC_PWRDIS_LATCHEN;
++			W_REG(osh, &chipcb->pcu_aopc_control, val);
++			val1 = R_REG(osh, &chipcb->pcu_status);
++			val1 &= PCU_PWR_EN_STRAPS_MASK;
++			val |= (~(val1 << 1) & PCU_AOPC_PWRDIS_MASK);
++			val &= ~PCU_AOPC_PWRDIS_DDR;
++			W_REG(osh, &chipcb->pcu_aopc_control, val);
++		}
++	}
++
++	/* Set DDR clock */
++	ddr = (ddrcregs_t *)si_setcore(sih, NS_DDR23_CORE_ID, 0);
++	if (!ddr)
++		goto out;
++	val = R_REG(osh, (uint32 *)DDR_S1_IDM_RESET_CONTROL);
++	if ((val & AIRC_RESET) == 0)
++		val = R_REG(osh, &ddr->control[0]);
++	else
++		val = 0;
++	if (val & DDRC00_START) {
++		clkval = *((uint32 *)(0x1000 + BISZ_OFFSET - 4));
++		if (clkval) {
++			val = AIRC_RESET;
++			W_REG(osh, (uint32 *)DDR_S1_IDM_RESET_CONTROL, val);
++			W_REG(osh, (uint32 *)DDR_S2_IDM_RESET_CONTROL, val);
++			ddrclock = clkval;
++			si_mem_setclock(sih, ddrclock);
++		}
++	} else {
++		/* DDR PHY doesn't support 333MHz for DDR3, so set the clock to 400 by default. */
++		ddrclock = DDR3_MIN_CLOCK;
++		si_mem_setclock(sih, ddrclock);
++	}
++
++	/* Find NVRAM for the sdram_config variable */
++	bootdev = soc_boot_dev((void *)sih);
++#ifdef NFLASH_SUPPORT
++	if (bootdev == SOC_BOOTDEV_NANDFLASH) {
++		flbase = SI_NS_NANDFLASH;
++		goto embedded_nv;
++	}
++	else
++#endif /* NFLASH_SUPPORT */
++	{
++		/* bootdev == SOC_BOOTDEV_SFLASH */
++		flbase = SI_NS_NORFLASH;
++		off = FLASH_MIN;
++		while (off <= SI_NS_FLASH_WINDOW) {
++			nvh = (struct nvram_header *)(flbase + off - MAX_NVRAM_SPACE);
++			if (R_REG(osh, &nvh->magic) == NVRAM_MAGIC)
++				break;
++			off += DEF_NVRAM_SPACE;
++			nvh = NULL;
++		};
++	}
++#ifdef NFLASH_SUPPORT
++embedded_nv:
++#endif
++	if (nvh == NULL) {
++		nvh = (struct nvram_header *)(flbase + 1024);
++		if (R_REG(osh, &nvh->magic) != NVRAM_MAGIC) {
++			goto out;
++		}
++	}
++	config_refresh = R_REG(osh, &nvh->config_refresh);
++	sdram_config = config_refresh & 0xffff;
++	sdram_refresh = (config_refresh >> 16) & 0xffff;
++	sdram_ncdl = R_REG(osh, &nvh->config_ncdl);
++#ifdef BCMDBG
++	printf("%s: sdram_config=0x%04x sdram_ncdl=0x%08x\n",
++		__FUNCTION__, sdram_config, sdram_ncdl);
++#endif
++
++	/* Take DDR23 core out of reset */
++	W_REG(osh, (uint32 *)DDR_S1_IDM_RESET_CONTROL, 0);
++	W_REG(osh, (uint32 *)DDR_S2_IDM_RESET_CONTROL, 0);
++	/* Set the ddr_ck to 400 MHz, 2x memc clock */
++	val = R_REG(osh, (uint32 *)DDR_S1_IDM_IO_CONTROL_DIRECT);
++	val &= ~(0xfff << 16);
++	val |= (0x190 << 16);
++	W_REG(osh, (uint32 *)DDR_S1_IDM_IO_CONTROL_DIRECT, val);
++
++	/* Wait for DDR PHY up */
++	for (i = 0; i < 0x19000; i++) {
++		val = R_REG(osh, &ddr->phy_control_rev);
++		if (val != 0)
++			break; /* DDR PHY is up */
++	}
++	if (i == 0x19000) {
++#ifdef BCMDBG
++		printf("Recalibrating DDR PHY...\n");
++#endif
++		si_watchdog(sih, 1);
++		while (1);
++	}
++
++	/* Change PLL divider values inside PHY */
++	W_REG(osh, &ddr->phy_control_plldividers, 0x00000c10);	/* high sku ? */
++	if (ddrclock != DDR_DEFAULT_CLOCK) {
++		/* SHAMOO related DDR PHY init change */
++#ifdef CONFIG_DDR_LONG_PREAMBLE
++		params = DDR40_PHY_PARAM_USE_VTT |
++			DDR40_PHY_PARAM_ODT_LATE |
++			DDR40_PHY_PARAM_ADDR_CTL_ADJUST_0 |
++			DDR40_PHY_PARAM_ADDR_CTL_ADJUST_1 |
++			DDR40_PHY_PARAM_MAX_ZQ |
++			DDR40_PHY_PARAM_LONG_PREAMBLE;
++#else
++		params = DDR40_PHY_PARAM_USE_VTT |
++			DDR40_PHY_PARAM_ODT_LATE |
++			DDR40_PHY_PARAM_ADDR_CTL_ADJUST_0 |
++			DDR40_PHY_PARAM_ADDR_CTL_ADJUST_1 |
++			DDR40_PHY_PARAM_MAX_ZQ;
++#endif /* CONFIG_DDR_LONG_PREAMBLE */
++		if (ddrtype_ddr3) {
++			/* DDR3, 1.5v */
++			params |= DDR40_PHY_PARAM_VDDO_VOLT_0;
++		}
++		else {
++			/* DDR2, 1.8v */
++			params |= DDR40_PHY_PARAM_VDDO_VOLT_1;
++		}
++		connect = 0x01CF7FFF;
++		ovride = 0x00077FFF;
++		status = ddr40_phy_init(ddrclock, params, ddrtype_ddr3,
++			wire_dly, connect, ovride, (uint32_t)DDR_PHY_CONTROL_REGS_REVISION);
++		if (status != DDR40_PHY_RETURN_OK) {
++			printf("Error: ddr40_phy_init failed with error 0x%x\n", status);
++			return;
++		}
++	} else {
++		/* Set LDO output voltage control to 1.00 * VDDC, and enable PLL */
++		val = (1 << 4);
++		W_REG(osh, &ddr->phy_control_pllconfig, val);
++
++		/* Wait for PLL locked */
++		for (i = 0; i < 0x1400; i++) {
++			val = R_REG(osh, &ddr->phy_control_pllstatus);
++			if (val & 0x1)
++				break;
++		}
++		if (i == 0x1400) {
++			printf("DDR PHY PLL lock failed\n");
++			goto out;
++		}
++
++		W_REG(osh, &ddr->phy_ln0_rddata_dly, 3);	/* high sku? */
++
++		/* Write 2 if ddr2, 3 if ddr3 */
++		/* Set preamble mode according to DDR type,
++		 * and length of write preamble to 1.5 DQs, 0.75 DQ
++		 */
++		if (ddrtype_ddr3)
++			val = 1;
++		else
++			val = 0;
++#ifdef CONFIG_DDR_LONG_PREAMBLE
++		val |= 2;
++#endif
++		W_REG(osh, &ddr->phy_ln0_wr_premb_mode, val);
++
++		/* Initiate a PVT calibration cycle */
++		W_REG(osh, &ddr->phy_control_zq_pvt_compctl, (1 << 20));
++
++		/* Initiate auto calibration and apply the results to VDLs */
++		W_REG(osh, &ddr->phy_control_vdl_calibrate, 0x08000101);	/* high sku? */
++
++		/* Wait for Calibration lock done */
++		for (i = 0; i < 0x1400; i++) {
++			val = R_REG(osh, &ddr->phy_control_vdl_calibsts);
++			if (val & 0x1)
++				break;
++		}
++		if (i == 0x1400) {
++			printf("DDR PHY auto calibration timed out\n");
++			goto out;
++		}
++
++		if (!(val & 0x2)) {
++#ifdef BCMDBG
++			printf("Need re-calibrating...\n");
++#endif
++			si_watchdog(sih, 1);
++			while (1);
++		}
++	}
++
++	if (ddrtype_ddr3) {
++		ddr_regs_init(sih, ddr, ddr3_init_tab_1600);
++	} else {
++		ddr_regs_init(sih, ddr, ddr2_init_tab_400);
++	}
++	if (ddrclock == DDR_DEFAULT_CLOCK) {
++		/* High SKU, DDR-1600 */
++		/* Auto initialization fails at DDRCLK 800 MHz, manually override */
++		W_REG(osh, &ddr->phy_ln0_vdl_ovride_byte1_r_n, 0x00010120);
++		W_REG(osh, &ddr->phy_ln0_vdl_ovride_byte0_bit_rd_en, 0x0001000d);
++		W_REG(osh, &ddr->phy_ln0_vdl_ovride_byte1_bit_rd_en, 0x00010020);
++	}
++
++	/* Set Tref */
++	if (sdram_refresh == 0)
++		sdram_refresh = (0x1858 * ddrclock) / 800;
++
++	val = R_REG(osh, &ddr->control[21]);
++	val &= ~0x3fff;
++	val |= sdram_refresh & 0x3fff;
++	W_REG(osh, &ddr->control[21], val);
++
++	val = R_REG(osh, &ddr->control[22]);
++	val &= ~0x3fff;
++	val |= sdram_refresh & 0x3fff;
++	W_REG(osh, &ddr->control[22], val);
++
++	if (sdram_config) {
++		uint32 cas, wrlat;
++
++		/* Check reduce mode */
++		val = R_REG(osh, &ddr->control[87]);
++		if (sdram_config & 0x80)
++			val |= (1 << 8);
++		W_REG(osh, &ddr->control[87], val);
++
++		val = R_REG(osh, &ddr->control[82]);
++		/* Check 8-bank mode */
++		if (sdram_config & 0x40)
++			val &= ~(3 << 8);
++		else {
++			/* default 4 banks */
++			val &= ~(3 << 8);
++			val |= (1 << 8);
++		}
++		/* Defaul row_diff=0; Check column diff */
++		val &= ~(0x707 << 16);
++		val |= ((sdram_config & 0x700) << 16);
++		W_REG(osh, &ddr->control[82], val);
++
++		/* Now do CAS latency settings */
++		cas = sdram_config & 0x1f;
++		if (cas > 5)
++			wrlat = cas - (cas-4)/2;
++		else
++			wrlat = cas - 1;
++
++		val = R_REG(osh, &ddr->control[5]);
++		val &= ~0x3f1f3f00;
++		val = val | (cas << 9) | (cas << 25) | (wrlat << 16);
++		W_REG(osh, &ddr->control[5], val);
++
++		val = R_REG(osh, &ddr->control[6]);
++		val &= ~0x1f;
++		val |= wrlat;
++		W_REG(osh, &ddr->control[6], val);
++
++		val = R_REG(osh, &ddr->control[174]);
++		val &= ~0x1f3f;
++		val |= (wrlat << 8) | (cas-1);
++		W_REG(osh, &ddr->control[174], val);
++
++		val = R_REG(osh, &ddr->control[186]);
++		val &= ~0xff000000;
++		val |= ((cas+17) << 24);
++		W_REG(osh, &ddr->control[186], val);
++
++		if (ddrtype_ddr3) {
++			val = R_REG(osh, &ddr->control[44]);
++			val &= ~0xf000;
++			val |= ((cas-4) << 12);
++			W_REG(osh, &ddr->control[44], val);
++
++			val = R_REG(osh, &ddr->control[45]);
++			val &= ~0x00380000;
++			if (cas > 9)
++				val |= ((cas-8) << 19);
++			else if (cas > 7)
++				val |= ((cas-7) << 19);
++			else if (cas >= 6)
++				val |= ((cas-6) << 19);
++			W_REG(osh, &ddr->control[45], val);
++
++			val = R_REG(osh, &ddr->control[206]);
++			val &= ~0x00001f00;
++			val |= ((wrlat-1) << 8);
++			W_REG(osh, &ddr->control[206], val);
++		} else {
++			val = R_REG(osh, &ddr->control[44]);
++			val &= ~0xf000;
++			val |= (cas << 12);
++			W_REG(osh, &ddr->control[44], val);
++		}
++	}
++
++	/* Start the DDR */
++	val = R_REG(osh, &ddr->control[0]);
++	val |= DDRC00_START;
++	W_REG(osh, &ddr->control[0], val);
++	while (!(R_REG(osh, &ddr->control[89]) & DDR_INT_INIT_DONE));
++#ifdef BCMDBG
++	printf("%s: DDR PLL locked\n", __FUNCTION__);
++#endif
++
++	W_REG(osh, &ddr->phy_ln0_rddata_dly, 3);	/* high sku? */
++
++	/* Run the SHMOO */
++	if (ddrtype_ddr3 && ddrclock > DDR3_MIN_CLOCK) {
++		status = do_shmoo((void *)sih, DDR_PHY_CONTROL_REGS_REVISION, 0,
++			((26 << 16) | (16 << 8) | DO_ALL_SHMOO), 0x1000000);
++		if (status != SHMOO_NO_ERROR) {
++			printf("Error: do_shmoo failed with error 0x%x\n", status);
++#ifdef BCMDBG
++			goto out;
++#else
++			hnd_cpu_reset(sih);
++#endif
++		}
++	}
++
++out:
++	asm("mov pc,%0" : : "r"(ra) : "cc");
++}
+diff --git a/src/linux/universal/linux-3.10/brcm/arm/shared/hndfwd.c b/src/linux/universal/linux-3.10/brcm/arm/shared/hndfwd.c
+new file mode 100644
+index 00000000000..0015a8c46df
+--- /dev/null
++++ b/src/linux/universal/linux-3.10/brcm/arm/shared/hndfwd.c
+@@ -0,0 +1,1546 @@
++/** HND GMAC Forwarder Implementation: LAN(GMAC) <--FWD--> WLAN
++ * Include WOFA dictionary with 3 stage lookup.
++ *
++ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
++ * 
++ * Permission to use, copy, modify, and/or distribute this software for any
++ * purpose with or without fee is hereby granted, provided that the above
++ * copyright notice and this permission notice appear in all copies.
++ * 
++ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
++ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
++ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
++ * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
++ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
++ * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
++ * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
++ * $Id$
++ *
++ * vim: set ts=4 noet sw=4 tw=80:
++ * -*- Mode: C; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*-
++ *
++ */
++
++#if defined(BCM_GMAC3)
++
++#include <linux/if.h>
++#include <linux/skbuff.h>
++#include <linux/netdevice.h>
++#include <linux/interrupt.h>
++#include <osl.h>
++#include <hndfwd.h>
++#include <bcmutils.h>
++#include <proto/vlan.h>
++#include <proto/ethernet.h>
++
++/* forward declaration */
++struct fwder_if;
++struct fwder_cpumap;
++
++#define FWDER_WOFA_NULL         ((fwder_wofa_t *)NULL)
++#define FWDER_NET_DEVICE_NULL   ((struct net_device *)NULL)
++#define FWDER_BYPASS_FN_NULL    ((fwder_bypass_fn_t)NULL)
++
++#define FWDER_ALIGN16(sym)      FWDER_ASSERT((((uintptr)sym) & 1) == 0)
++
++/* Safe fetch of a string member given a structure pointer. */
++#define __SSTR(_struct_ptr, _member) \
++	(((_struct_ptr) != NULL) ? (_struct_ptr)->_member : "null")
++
++/* Formatted Etherned Mac Address display */
++#define __EFMT                      "%02X:%02X:%02X:%02X:%02X:%02X "
++#define __EVAL(e)                   *((e) + 0), *((e) + 1), *((e) + 2), \
++	                                *((e) + 3), *((e) + 4), *((e) + 5)
++
++/** WOFA Dictionary manipulation helper static function declarations. */
++/** WOFA Dictionary symbol manipulation. */
++static inline uint16 __wofa_sym48_hash16(const uint16 * key);
++static inline uint16 __wofa_sym48_cmp16(const uint16 * key, const uint16 * sym);
++static inline void   __wofa_sym48_set16(const uint16 * key, uint16 * sym);
++/** WOFA Dictionary bloom filter manipulation. */
++static inline uint32 __wofa_bloom_lkup16(const uint32 * bfilter, const uint16 hash16);
++static inline void   __wofa_bloom_set16(uint32 * bfilter, const uint16 hash16);
++static inline void   __wofa_bloom_clr16(uint32 * bfilter, const uint16 hash16);
++
++/** WOFA based Forwarding static function declarations. */
++/** WOFA Accessors. */
++static inline uint32 __fwder_wofa_syms(struct fwder_wofa * fwder_wofa);
++#if defined(FWDER_STATS)
++static inline uint32 __fwder_wofa_hits(struct fwder_wofa * fwder_wofa);
++static inline uint32 __fwder_wofa_miss(struct fwder_wofa * fwder_wofa);
++#endif /* FWDER_STATS */
++/** WOFA Constructor and Destructor. */
++static struct fwder_wofa * _fwder_wofa_init(const int funit);
++static void          _fwder_wofa_fini(struct fwder_wofa * fwder_wofa);
++/** WOFA Address Resolution Logic. */
++static inline int    __fwder_wofa_add(struct fwder_wofa * fwder_wofa,
++                                      uint16 * symbol, wofa_t wofa);
++static inline int    __fwder_wofa_del(struct fwder_wofa * fwder_wofa,
++                                      uint16 * symbol, wofa_t wofa);
++static inline int    __fwder_wofa_clr(struct fwder_wofa * fwder_wofa,
++                                      wofa_t wofa);
++static inline uintptr_t __fwder_wofa_lkup(struct fwder_wofa * fwder_wofa,
++                                          uint16 * symbol, const int port);
++/** WOFA Debug dump and audit. */
++static void          _fwder_wofa_dump(struct bcmstrbuf *b,
++                                      struct fwder_wofa * fwder_wofa);
++
++/** Forwarder static function delcarations. */
++/** Forwarder accessor string formating. */
++static inline const char * __fwder_dir(const int dir);
++static inline const char * __fwder_mode(const int mode);
++static inline const char * __fwder_chan(const int chan);
++/** Forwarder default bypass handler. */
++static int _fwder_bypass_fn(fwder_t * fwder, struct sk_buff * skbs, int skb_cnt,
++                            struct net_device * rx_dev);
++/** Forwarder cpumap configuration. */
++static int _fwder_cpumap_config(int radio, struct fwder_cpumap *map);
++static int _fwder_cpumap_parse(const char *fwder_cpumap_nvar_str);
++/** Forwarder instance accessor. */
++static inline fwder_t * ___fwder_self(const fwder_dir_t dir, int funit);
++static inline fwder_t * __fwder_self(const fwder_dir_t dir, int funit);
++static inline void      __fwder_sync_devs_cnt(fwder_t * fwder_dn);
++static inline struct fwder_if * __fwder_if(int unit, int subunit);
++
++/** Forwarder Debug and audit. */
++static void _fwder_dump(struct bcmstrbuf *b, const fwder_t * fwder);
++static void _fwder_devs_dump(struct bcmstrbuf *b, dll_t * fwder_if_dll);
++
++
++/** WOFA Dictionary sizing. */
++#define WOFA_DICT_SYMBOL_SIZE   (6) /* Size of a Mac Address */
++#define WOFA_DICT_BKT_MAX       (1 << NBBY)
++#define WOFA_DICT_BIN_MAX       (4) /* collision list */
++#define WOFA_DICT_SYMBOLS_MAX   (WOFA_DICT_BKT_MAX * WOFA_DICT_BIN_MAX)
++
++#if (WOFA_DICT_SYMBOL_SIZE != 6)
++#error "Validated for 6Byte symbols"
++#endif
++
++#if (WOFA_DICT_BKT_MAX != 256)
++#error "Dictionary hash table size uses a uint8 index"
++#endif
++
++/** WOFA Bloom Filter sizing. */
++#define WOFA_BLOOMFILTER_BITS   (64 * 1024) /* 16bit hash index */
++#define WOFA_BLOOMFILTER_WORDS  (WOFA_BLOOMFILTER_BITS / 32)
++
++/** WOFA Cached recent hit per LAN port|WLAN Interface. */
++#define WOFA_MAX_PORTS          (FWDER_MAX_IF + 1)
++
++/** WOFA Symbol: key, 32bit associated metadata, and runtime stats */
++typedef struct wofa_sym {           /* 16Byte symbol + metadata */
++	uint16         hash16;
++	union {                         /* dictionary symbol ethernet MAC address */
++		uint8       u8[WOFA_DICT_SYMBOL_SIZE];
++		uint16     u16[WOFA_DICT_SYMBOL_SIZE / sizeof(uint16)];
++	} key;
++	wofa_t         wofa;            /* 32bit meta data */
++#if defined(FWDER_STATS)
++	uint32         hits;            /* Per symbol hit statistics */
++#endif
++} wofa_sym_t;
++
++/** WOFA Fast lookup of cached last hit hash16. */
++typedef struct wofa_cached {
++	uint16         hash16;          /* Cached recent hit ix */
++	wofa_sym_t     * sym;           /* Cache recent symbol */
++} wofa_cached_t;
++
++/* WOFA Hash table bin. */
++typedef struct wofa_bin {
++	wofa_sym_t     bin[WOFA_DICT_BIN_MAX];
++} wofa_bin_t;
++
++/* WOFA Hash table bkt of bins. */
++typedef struct wofa_bkt {
++	wofa_bin_t     bkt[WOFA_DICT_BKT_MAX];
++} wofa_bkt_t;
++
++/** WOFA Dictionary of MAC Address symbols for lookup based forwarding.
++ * WOFA Dictionary constituted of a cached, bloom filter and hash table lkup.
++ */
++typedef struct wofa_dict {
++	wofa_cached_t  cached[WOFA_MAX_PORTS];
++	uint32         bloomfilter[WOFA_BLOOMFILTER_WORDS];
++	wofa_bkt_t     table;           /* Hash table: buckets and bins */
++} wofa_dict_t;
++
++/** Forwarder instance of a WOFA lkup system. */
++typedef struct fwder_wofa {
++	wofa_dict_t    dict;            /* Dictionary of 6B symbols and metadata */
++	int            syms;            /* Number of symbols in dictionary */
++#if defined(FWDER_STATS)
++	uint32         hits;            /* Lookup successful statistics counter */
++	uint32         miss;            /* Lookup failure statistics counter */
++#endif /* FWDER_STATS */
++} fwder_wofa_t;
++
++static fwder_wofa_t * _fwder_wofa[FWDER_MAX_UNIT] =
++{ FWDER_WOFA_NULL, FWDER_WOFA_NULL };
++
++/** Hash table and symbol manipulation helper routines. */
++
++/** Compute 16bit hash, on a 16bit aligned 6Byte key. */
++static inline uint16
++__wofa_sym48_hash16(const uint16 * key)
++{
++	uint16 hash16;
++	hash16 = (*(key + 0)) ^ (*(key + 1)) ^ (*(key + 2));
++	return hash16;
++}
++
++/** Compare two 6Byte values that are 2Byte aligned. */
++static inline uint16
++__wofa_sym48_cmp16(const uint16 * key, const uint16 * sym)
++{
++	/* returns 0 if equal */
++	return ((*(key + 0) ^ *(sym + 0)) |
++	        (*(key + 1) ^ *(sym + 1)) |
++	        (*(key + 2) ^ *(sym + 2)));
++}
++
++/** Set a 6Byte 16bit aligned symbol from a given 6B key. */
++static inline void
++__wofa_sym48_set16(const uint16 * key, uint16 * sym)
++{
++	*(sym + 0) = *(key + 0);
++	*(sym + 1) = *(key + 1);
++	*(sym + 2) = *(key + 2);
++}
++
++/** Single hash bloom filter manipulation helper routines. */
++
++/* Lkup a bloom filter for a 16bit hash_key */
++static inline uint32
++__wofa_bloom_lkup16(const uint32 * bloom_filter, const uint16 hash16)
++{
++	return ((*(bloom_filter + (hash16 >> 5))) & (1U << (hash16 & 31)));
++}
++
++static inline void
++__wofa_bloom_set16(uint32 * bloom_filter, const uint16 hash16)
++{
++	*(bloom_filter + (hash16 >> 5)) |= (1U << (hash16 & 31));
++}
++
++static inline void
++__wofa_bloom_clr16(uint32 * bloom_filter, const uint16 hash16)
++{
++	*(bloom_filter + (hash16 >> 5)) &= ~(1U << (hash16 & 31));
++}
++
++#define DECLARE_WOFA_FN(FIELD)                                                 \
++static inline uint32 __fwder_wofa_ ## FIELD(fwder_wofa_t * fwder_wofa)         \
++{ return fwder_wofa->FIELD; }
++DECLARE_WOFA_FN(syms) /* __fwder_wofa_syms(): Return num active symbols */
++#if defined(FWDER_STATS)
++DECLARE_WOFA_FN(hits) /* __fwder_wofa_hits() Return num of successful lkups */
++DECLARE_WOFA_FN(miss) /* __fwder_wofa_miss() Return num of unsuccessful lkups */
++#endif /* FWDER_STATS */
++
++/** Allocate and reset storage for dictionary and bloom filter. */
++static fwder_wofa_t * __init
++_fwder_wofa_init(const int funit)
++{
++	int bin, bkt, port;
++	gfp_t flags;
++	wofa_dict_t * dict;
++	fwder_wofa_t * fwder_wofa;
++	const int fwder_wofa_sz = sizeof(fwder_wofa_t);
++
++	FWDER_ASSERT(funit < FWDER_MAX_UNIT);
++	FWDER_ASSERT(_fwder_wofa[funit] == FWDER_WOFA_NULL);
++
++	flags = CAN_SLEEP() ? GFP_KERNEL : GFP_ATOMIC;
++	fwder_wofa = (fwder_wofa_t *)kmalloc(fwder_wofa_sz, flags);
++
++	if (fwder_wofa == FWDER_WOFA_NULL) {
++		FWDER_WARN(("%s Failed allocate wofa size<%u>\n",
++		            __FUNCTION__, fwder_wofa_sz));
++		ASSERT(fwder_wofa != FWDER_WOFA_NULL);
++		return FWDER_WOFA_NULL;
++	}
++
++	bzero(fwder_wofa, fwder_wofa_sz); /* Initializes bloomfilter state */
++	dict = &fwder_wofa->dict;
++
++	/* Initialize cache lkup state */
++	for (port = 0; port < WOFA_MAX_PORTS; port++) {
++		dict->cached[port].hash16 = 0;
++		dict->cached[port].sym = &dict->table.bkt[0].bin[0];
++	}
++
++	/* Initialize hash lkup state */
++	for (bkt = 0; bkt < WOFA_DICT_BKT_MAX; bkt++) {
++		for (bin = 0; bin < WOFA_DICT_BIN_MAX; bin++) {
++			dict->table.bkt[bkt].bin[bin].wofa = FWDER_WOFA_INVALID;
++		}
++	}
++
++	FWDER_STATS_CLR(fwder_wofa->hits);
++	FWDER_STATS_CLR(fwder_wofa->miss);
++
++	FWDER_TRACE(("Fwder WOFA[%d]:<%p> size<%uKB:%uB>\n",
++	             funit, fwder_wofa, fwder_wofa_sz/1024, fwder_wofa_sz));
++
++	_fwder_wofa[funit] = fwder_wofa;
++
++	return fwder_wofa;
++}
++
++/** Free storage for dictionary and bloom filter. */
++static void
++_fwder_wofa_fini(fwder_wofa_t * fwder_wofa)
++{
++	if (fwder_wofa == FWDER_WOFA_NULL)
++		return;
++
++	kfree(fwder_wofa);
++}
++
++/** Add a symbol to WOFA dictionary: hash table and bloom-filter. */
++static inline int
++__fwder_wofa_add(fwder_wofa_t * fwder_wofa, uint16 * symbol, wofa_t wofa)
++{
++	uint16 hash16;
++	wofa_dict_t * dict;
++
++	FWDER_ASSERT(fwder_wofa != FWDER_WOFA_NULL);
++	FWDER_ASSERT(symbol != NULL);
++	FWDER_ASSERT(wofa != FWDER_WOFA_INVALID);
++
++	dict = &fwder_wofa->dict;
++	hash16 = __wofa_sym48_hash16(symbol);
++
++	{   /* Search the exact match hash table */
++		int added = 0;
++		uint8 hash8;      /* CAUTION: 8bit hash index for 258 buckets */
++		wofa_sym_t * sym; /* walk bins (collision list) in a bucket */
++		wofa_sym_t * end; /* last bin in the bucket collision list */
++
++		/* Fold the 16bit hash into a 8bit hash table index */
++		hash8 = ((uint8)(hash16) ^ (uint8)(hash16 >> 8));
++
++		/* Fetch the first bin in the hashed bucket */
++		sym = &dict->table.bkt[hash8].bin[0];
++		end = sym + WOFA_DICT_BIN_MAX; /* after last bin in collision list */
++
++		while ((uintptr)sym < (uintptr)end) {
++
++			/* Check for duplicates */
++			if (sym->wofa != FWDER_WOFA_INVALID) { /* valid entry */
++
++				if (__wofa_sym48_cmp16(symbol, sym->key.u16) == 0) {
++					/* Found a previous entry */
++					if (added == 0) { /* overwrite duplicate */
++						FWDER_ASSERT(sym->hash16 == hash16);
++						sym->wofa = wofa;
++						FWDER_STATS_CLR(sym->hits);
++						added = 1;
++					} else {  /* duplicate? */
++						FWDER_WARN(("Found several duplicate symbol"));
++						sym->wofa = FWDER_WOFA_INVALID;
++						sym->hash16 = 0; /* 0 may be a valid value */
++						fwder_wofa->syms--;
++					}
++				}
++
++			} else if (added == 0) { /* found an empty bin, insert here */
++
++				__wofa_bloom_set16(dict->bloomfilter, hash16);
++
++				__wofa_sym48_set16(symbol, sym->key.u16);
++
++				sym->hash16 = hash16;
++				sym->wofa = wofa;
++				FWDER_STATS_CLR(sym->hits);
++				FWDER_TRACE(("WOFA add " __EFMT "wofa<0x%08x>\n",
++				             __EVAL((uint8*)symbol), (uint)wofa));
++				fwder_wofa->syms++;
++				added = 1; /* used to clear duplicates */
++			}
++
++			sym++; /* next bin; for duplicates/overwrite */
++		}
++
++		if (added == 0) {
++			FWDER_WARN(("WOFA add " __EFMT "wofa<0x%08x> : bkt<%u> overflow\n",
++			            __EVAL((uint8*)symbol), (uint)wofa, hash8));
++		}
++	}
++
++	return BCME_OK;
++}
++
++/** Delete a symbol from the WOFA dictionary and clear the bloom filter if no
++ * other elements have a matching hash.
++ */
++static inline int
++__fwder_wofa_del(fwder_wofa_t * fwder_wofa, uint16 * symbol, wofa_t wofa)
++{
++	uint16 hash16;
++	wofa_dict_t * dict;
++
++	FWDER_ASSERT(fwder_wofa != FWDER_WOFA_NULL);
++	FWDER_ASSERT(symbol != NULL);
++	FWDER_ASSERT(wofa != FWDER_WOFA_INVALID);
++
++	dict = &fwder_wofa->dict;
++	hash16 = __wofa_sym48_hash16(symbol);
++
++	{   /* Clear cached entry */
++		wofa_cached_t * cached = &dict->cached[0];
++		wofa_cached_t * end    = cached + WOFA_MAX_PORTS;
++		while ((uintptr)cached < (uintptr)end) {
++			if (cached->hash16 == hash16) {
++				cached->hash16 = 0; /* 0 is a valid value */
++				cached->sym = &dict->table.bkt[0].bin[0];
++			}
++			cached++; /* next port's cached entry */
++		}
++	}
++
++	{   /* Clear matching bins for the found bucket, in hash table */
++		uint8 hash8;      /* CAUTION: 8bit hash index for 258 buckets */
++		wofa_sym_t * sym; /* walk bins (collision list) in a bucket */
++		wofa_sym_t * end; /* last bin in the bucket collision list */
++
++		/* Fold the 16bit hash into a 8bit hash table index */
++		hash8 = ((uint8)(hash16) ^ (uint8)(hash16 >> 8));
++
++		sym = &dict->table.bkt[hash8].bin[0];
++		end = sym + WOFA_DICT_BIN_MAX; /* after last bin in collision list */
++
++		while ((uintptr)sym < (uintptr)end) {
++			if ((sym->wofa != FWDER_WOFA_INVALID) &&
++			       (sym->hash16 == hash16)) {
++				if (__wofa_sym48_cmp16(symbol, sym->key.u16) == 0) {
++					if (sym->wofa != wofa) {
++						FWDER_WARN((
++						   "%s sym->wofa<0x%08x> != wofa<0x%08x>\n",
++						   __FUNCTION__, (uint)sym->wofa, (uint)wofa));
++					}
++					sym->wofa = FWDER_WOFA_INVALID;
++					sym->hash16 = 0; /* 0 is a valid value */
++					fwder_wofa->syms--;
++				}
++			}
++			sym++; /* next bin in bkt collision list */
++		}
++	}
++
++	/*
++	 * If hash8 was computed from lower 8bits of hash16, then do not need to
++	 * walk entire table.
++	 */
++	{   /* Update bloom_filter */
++		int bkt, bin;
++		int found_hash16 = 0;
++
++		for (bkt = 0; bkt < WOFA_DICT_BKT_MAX; bkt++) {
++			for (bin = 0; bin < WOFA_DICT_BIN_MAX; bin++) {
++				const wofa_sym_t * sym = &dict->table.bkt[bkt].bin[bin];
++				if ((sym->wofa != FWDER_WOFA_INVALID) &&
++				        (sym->hash16 == hash16)) {
++					found_hash16 = 1;
++					break;
++				}
++			}
++		}
++
++		if (found_hash16 == 0) {
++			__wofa_bloom_clr16(dict->bloomfilter, hash16);
++		}
++	}
++
++	return BCME_OK;
++}
++
++
++/** Delete all symbols in the WOFA dictionary that match the wofa metadata and
++ * clear the bloom filter.
++ */
++static inline int
++__fwder_wofa_clr(struct fwder_wofa * fwder_wofa, wofa_t wofa)
++{
++	wofa_dict_t * dict;
++
++	FWDER_ASSERT(fwder_wofa != FWDER_WOFA_NULL);
++	FWDER_ASSERT(wofa != FWDER_WOFA_INVALID);
++
++	dict = &fwder_wofa->dict;
++
++	{   /* Reset cache entries */
++		int port;
++		for (port = 0; port < WOFA_MAX_PORTS; port++) {
++			dict->cached[port].hash16 = 0;
++			dict->cached[port].sym = &dict->table.bkt[0].bin[0];
++		}
++	}
++
++	/* Reset bloom filter */
++	bzero(dict->bloomfilter, sizeof(uint32) * WOFA_BLOOMFILTER_WORDS);
++
++	{	/* Rebuild bloom filter after flushing symbols. */
++		uint16 hash16;
++		int bkt, bin;
++		for (bkt = 0; bkt < WOFA_DICT_BKT_MAX; bkt++) {
++			for (bin = 0; bin < WOFA_DICT_BIN_MAX; bin++) {
++				if (dict->table.bkt[bkt].bin[bin].wofa == wofa) {
++					hash16 = dict->table.bkt[bkt].bin[bin].hash16;
++					__wofa_bloom_set16(dict->bloomfilter, hash16);
++				}
++			}
++		}
++	}
++
++	return FWDER_SUCCESS;
++}
++
++/** Lookup a symbol in the WOFA dictionary returning the wofa metadata.
++ * 3 Step lookup is performed. First the last hit cached entry is tested.
++ */
++static inline wofa_t
++__fwder_wofa_lkup(struct fwder_wofa * fwder_wofa, uint16 * symbol,
++                  const int port)
++{
++	uint16 hash16;
++	wofa_sym_t * sym;
++	wofa_dict_t * dict;
++
++	FWDER_ASSERT(fwder_wofa != FWDER_WOFA_NULL);
++	FWDER_ASSERT(symbol != NULL);
++
++	dict = &fwder_wofa->dict;
++	hash16 = __wofa_sym48_hash16(symbol);
++
++	/* Lkup the cached hit entry first */
++	if (hash16 == dict->cached[port].hash16) {
++		sym = dict->cached[port].sym;
++		if (__wofa_sym48_cmp16(symbol, sym->key.u16) == 0) {
++			goto found_symbol;
++		}
++	}
++
++	/* Now Lkup bloom filter and quickly exit on failure */
++	if (__wofa_bloom_lkup16(dict->bloomfilter, hash16) == 0U) {
++		goto bloomfilter_lkup_failure;
++	}
++
++	/* Single hash bloom filter susceptible to false positives, exact match */
++
++	{   /* Now search the exact match hash table: testing all bins in bkt */
++		uint8 hash8;
++		wofa_sym_t * end; /* last bin in the bucket collision list */
++
++		/* CAUTION: 8bit hash index for 258 buckets */
++		/* Fold the 16bit hash into a 8bit hash table index */
++		hash8 = ((uint8)(hash16) ^ (uint8)(hash16 >> 8));
++
++		sym = &dict->table.bkt[hash8].bin[0];
++		end = sym + WOFA_DICT_BIN_MAX; /* after last bin in collision list */
++
++		/* Walk the bins for the hashed bucket */
++		while ((uintptr)sym < (uintptr)end) {
++
++			if (sym->hash16 == hash16) {
++				/* Test exact match */
++				if (__wofa_sym48_cmp16(symbol, sym->key.u16) == 0) {
++
++					/* Cache the new hit index */
++					dict->cached[port].hash16 = hash16;
++					dict->cached[port].sym = sym;
++
++					goto found_symbol;
++				}
++			}
++
++			sym++; /* next bin in collision list */
++		}
++	}
++
++bloomfilter_lkup_failure:
++	FWDER_STATS_INCR(fwder_wofa->miss);
++
++	return FWDER_WOFA_INVALID;
++
++found_symbol:
++	FWDER_STATS_INCR(fwder_wofa->hits);
++	FWDER_STATS_INCR(sym->hits);
++
++	FWDER_ASSERT(sym->wofa != FWDER_WOFA_INVALID);
++
++	return sym->wofa; /* return associated wofa metadata */
++}
++
++/** Debug dump a forwaring unit's WOFA table. */
++static void
++_fwder_wofa_dump(struct bcmstrbuf *b, fwder_wofa_t * fwder_wofa)
++{
++	int dump, word, port, bkt, bin;
++	wofa_sym_t * sym;
++	wofa_dict_t * dict;
++
++	if (fwder_wofa == FWDER_WOFA_NULL)
++		return;
++
++	dict = &fwder_wofa->dict;
++
++	bcm_bprintf(b, "WOFA Symbols<%u>\n", __fwder_wofa_syms(fwder_wofa));
++
++#if defined(FWDER_STATS)
++	bcm_bprintf(b, "WOFA Statistics: hits<%u> miss<%u>\n",
++	            __fwder_wofa_hits(fwder_wofa), __fwder_wofa_miss(fwder_wofa));
++#endif /* FWDER_STATS */
++
++	bcm_bprintf(b, "WOFA Cached Table Dump:\n");
++	for (port = 0; port < WOFA_MAX_PORTS; port++) {
++		bcm_bprintf(b, "\tPort<%2d> : hash<0x%04x> sym<%p>\n",
++		            port, dict->cached[port].hash16, dict->cached[port].sym);
++	}
++
++	bcm_bprintf(b, "WOFA Bloom Filter Dump\n");
++	for (word = 0; word < WOFA_BLOOMFILTER_WORDS; word++) {
++		if (dict->bloomfilter[word] != 0) {
++			bcm_bprintf(b, "\tBF[%04u] = 0x%08x\n",
++			            word, dict->bloomfilter[word]);
++		}
++	}
++
++	dump = 0;
++
++	bcm_bprintf(b, "WOFA Hash Table Dump\n");
++	for (bkt = 0; bkt < WOFA_DICT_BKT_MAX; bkt++) {
++		for (bin = 0; bin < WOFA_DICT_BIN_MAX; bin++) {
++			sym = &dict->table.bkt[bkt].bin[bin];
++			if (sym->wofa != FWDER_WOFA_INVALID) {
++				bcm_bprintf(b, "\t" __EFMT "wofa<0x%08x> "
++#if defined(FWDER_STATS)
++				            "hits<%u> "
++#endif
++				            "BktBin<%03d:%d] sym<%p> hash<0x%04X:%05u>\n",
++				            __EVAL(sym->key.u8), (uint)sym->wofa,
++#if defined(FWDER_STATS)
++				            sym->hits,
++#endif
++				            bkt, bin, sym, sym->hash16, (int)sym->hash16);
++
++				if (++dump > 32) {
++					bcm_bprintf(b, "... too many to dump ...\n");
++					break;
++				}
++			}
++		}
++	}
++
++	bcm_bprintf(b, "\n\n");
++}
++
++/* fwder enum to string conversions for debug dump: fwder_dir(), fwder_mode() */
++static const char * _fwder_dir_g[FWDER_MAX_DIR] = { "UP", "DN" };
++static const char * _fwder_mode_g[FWDER_MAX_MODE] = { "NIC", "DGL" };
++static const char * _fwder_chan_g[FWDER_MAX_CHAN] = { "UPPER", "LOWER", "UNDEF" };
++
++#define DECLARE_FWDER_ENUM_STR(name, max)                                      \
++	static inline const char * __fwder_##name(const int name)                  \
++	{ return (name < max) ? _fwder_##name##_g[name] : "invalid"; }
++DECLARE_FWDER_ENUM_STR(dir, FWDER_MAX_DIR)   /* __fwder_dir(int) */
++DECLARE_FWDER_ENUM_STR(mode, FWDER_MAX_MODE) /* __fwder_mode(int) */
++DECLARE_FWDER_ENUM_STR(chan, FWDER_MAX_CHAN) /* __fwder_chan(int) */
++
++
++/** Default dummy xmit handler bound to the fwder. */
++static int
++_fwder_bypass_fn(fwder_t * fwder, struct sk_buff * skbs, int skb_cnt,
++                 struct net_device * rx_dev)
++{
++	ASSERT(fwder != FWDER_NULL);
++
++	FWDER_PTRACE(("%s fwder<%p:%s> error skbs<%p> skb_cnt<%d> rx_dev<%p:%s>\n",
++	              __FUNCTION__, fwder, __SSTR(fwder, name), skbs, skb_cnt,
++	              rx_dev, __SSTR(rx_dev, name)));
++
++	FWDER_STATS_ADD(fwder->dropped, skb_cnt);
++
++	return FWDER_FAILURE;
++}
++
++/** HND Forwarder Radio to CPU/Fwder unit mapping. */
++typedef struct fwder_cpumap {
++	fwder_mode_t mode;
++	fwder_chan_t chan;
++	int band, irq, cpu;
++	int unit; /* fwder unit assigned from FWDER_CPUMAP_NVAR nvram settings */
++} fwder_cpumap_t;
++
++#define _FWDER_CPUMAP_INI_(ix)                                                 \
++	{ .mode = FWDER_NIC_MODE, .chan = FWDER_UNDEF_CHAN,                        \
++	  .band = 0, .irq = 0, .cpu = -1, .unit = ix }
++
++static fwder_cpumap_t fwder_cpumap_g[FWDER_MAX_RADIO] = {
++	_FWDER_CPUMAP_INI_(0),
++	_FWDER_CPUMAP_INI_(1),
++	_FWDER_CPUMAP_INI_(2),
++	_FWDER_CPUMAP_INI_(3)
++};
++
++/** Assign a fwder_unit number: [0 .. FWDER_MAX_RADIO) */
++int
++fwder_assign(fwder_mode_t mode, int radio_unit)
++{
++	FWDER_TRACE(("%s mode<%s> radio_unit<%d>\n",
++	             __FUNCTION__, __fwder_mode(mode), radio_unit));
++	ASSERT(fwder_cpumap_g[radio_unit].mode == mode);
++	ASSERT(fwder_cpumap_g[radio_unit].cpu != -1);
++
++	return fwder_cpumap_g[radio_unit].unit;
++}
++
++/** Assign the IRQ affinity for a radio identified by its assigned fwder_unit */
++int
++fwder_affinity(fwder_dir_t dir, int fwder_unit, int irq)
++{
++	int cpu_core;
++
++	FWDER_TRACE(("%s dir<%s> fwder_unit<%d> irq<%d>\n",
++	             __FUNCTION__, __fwder_dir(dir), fwder_unit, irq));
++	FWDER_ASSERT((dir < FWDER_MAX_DIR));
++	FWDER_ASSERT((fwder_unit < FWDER_MAX_RADIO));
++
++	if (dir == FWDER_UPSTREAM) { /* Radio Interface */
++		int radio_unit;
++		fwder_cpumap_t * cpumap = &fwder_cpumap_g[0];
++
++		for (radio_unit = 0; radio_unit < FWDER_MAX_RADIO; radio_unit++) {
++			cpumap = &fwder_cpumap_g[radio_unit];
++			if (cpumap->unit == fwder_unit)
++				break;
++		}
++
++		FWDER_ASSERT((cpumap->unit == fwder_unit) && (cpumap->irq == irq));
++
++		cpu_core = cpumap->cpu;
++	} else { /* GMAC forwarder */
++		cpu_core = fwder_unit;
++	}
++
++	FWDER_ASSERT((cpu_core < NR_CPUS));
++
++	FWDER_TRACE(("%s irq_set_affinity irq<%d> cpu_core<%d>\n",
++	             __FUNCTION__, irq, cpu_core));
++
++	/* Setup IRQ affinity */
++	irq_set_affinity(irq, cpumask_of(cpu_core));
++
++	return FWDER_SUCCESS;
++}
++
++/** Assign a fwder_unit number given a CPU map configurtion.
++ * When multiple radios share the same IRQ, they will be assigned to the same
++ * CPU by allocating a fwder_unit number to allow modulo-2 CPU mapping.
++ * The radio unit (probe sequence) and its configuration is used to allocate a
++ * fwder_unit : [0 .. FWDER_MAX_RADIO)
++ */
++static int
++_fwder_cpumap_config(int radio_unit, struct fwder_cpumap *map)
++{
++	int radio, fwder_unit;
++	fwder_cpumap_t * cpumap;
++
++	FWDER_TRACE(("%s %d. mode<%s> chan<%s> band<%d> irq<%d> cpu<%d>",
++	             __FUNCTION__, radio_unit, __fwder_mode(map->mode),
++	             __fwder_chan(map->chan), map->band, map->irq, map->cpu));
++	FWDER_ASSERT((radio_unit < FWDER_MAX_RADIO));
++
++	cpumap = &fwder_cpumap_g[radio_unit]; /* radio to be configured */
++	FWDER_ASSERT((cpumap->cpu == -1));
++
++	/* First radio sharing the IRQ will use the cpu core as fwder_unit. */
++	fwder_unit = map->cpu;
++
++	/* Traverse previously assigned cpumap and fetch the fwder_unit */
++	for (radio = 0; radio < radio_unit; radio++) {
++		if (fwder_cpumap_g[radio].irq == map->irq) {
++			if (fwder_cpumap_g[radio].cpu != map->cpu) {
++				FWDER_ERROR(("ERROR %s: unit:irq:cpu<%d:%d:%d> "
++				           "mismatch <%d:%d:%d>\n", __FUNCTION__, radio,
++				           fwder_cpumap_g[radio].irq, fwder_cpumap_g[radio].cpu,
++				           radio_unit, map->irq, map->cpu));
++				return FWDER_FAILURE;
++			}
++
++			/* Subsequent radios sharing IRQ will use first previous radio's
++			 * fwder_unit + max forwarder(s) allowing a module-FWDER_MAX_UNIT
++			 */
++			fwder_unit = fwder_cpumap_g[radio].unit + FWDER_MAX_UNIT;
++		}
++	}
++
++	cpumap->unit = fwder_unit; /* allocate fwder_unit for this radio. */
++	cpumap->mode = map->mode;
++	cpumap->chan = map->chan;
++	cpumap->band = map->band;
++	cpumap->irq  = map->irq;
++	cpumap->cpu  = map->cpu;
++
++	FWDER_TRACE((" fwder_unit<%d>\n", cpumap->unit));
++
++	return cpumap->unit;
++}
++
++/** Parse the FWDER_CPUMAP_NVAR nvram variable and apply configuration. */
++static int
++_fwder_cpumap_parse(const char *fwder_cpumap_nvar_str)
++{
++	int radio_unit = 0;
++	char parse_nvar_str[128]; /* local copy for strtok parsing */
++	char *cpumap_all_str = parse_nvar_str; /* cpumap str for all radios */
++	char *cpumap_per_str; /* cpumap str per radio */
++
++	if (fwder_cpumap_nvar_str == NULL)
++		return FWDER_FAILURE;
++
++	FWDER_TRACE(("%s = [%s]\n", FWDER_CPUMAP_NVAR, fwder_cpumap_nvar_str));
++
++	/* Make a local copy */
++	strncpy(parse_nvar_str, fwder_cpumap_nvar_str, sizeof(parse_nvar_str));
++	parse_nvar_str[sizeof(parse_nvar_str)-1] = '\0';
++
++	/* Fetch each radio's cpumap substr */
++	while ((cpumap_per_str = bcmstrtok((char **)&cpumap_all_str, " ", NULL))
++		    != NULL) { /* per radio cpumap substr parsing */
++		fwder_cpumap_t cpumap;
++		char mode, chan;
++
++		if (sscanf(cpumap_per_str, "%c:%c:%d:%d:%d", &mode, &chan,
++		                       &cpumap.band, &cpumap.irq, &cpumap.cpu) != 5) {
++			FWDER_ERROR(("ERROR %s: parsing radio cpumap %s\n",
++			             __FUNCTION__, cpumap_per_str));
++			return FWDER_FAILURE;
++		}
++		FWDER_ASSERT((cpumap.cpu < NR_CPUS));
++
++		cpumap.mode = (mode == 'd') ? FWDER_DNG_MODE : FWDER_NIC_MODE;
++		if (chan == 'u')
++			cpumap.chan = FWDER_UPPER_CHAN;
++		else if (chan == 'l')
++			cpumap.chan = FWDER_LOWER_CHAN;
++		else
++			cpumap.chan = FWDER_UNDEF_CHAN;
++
++		if (_fwder_cpumap_config(radio_unit, &cpumap) == FWDER_FAILURE) {
++			FWDER_ERROR(("ERROR %s: configuring radio cpumap\n", __FUNCTION__));
++			return FWDER_FAILURE;
++		}
++
++		radio_unit++; /* next radio unit */
++	}
++
++	return FWDER_SUCCESS;
++}
++
++
++/** HND Forwarder runtime state:
++ * Two (one per radio) sets of <upstream,dnstream> forwarder's are maintained.
++ */
++#if defined(CONFIG_SMP)
++
++#define _FWDER_INI_(NAME)                                                      \
++	{                                                                          \
++		.lock      = __SPIN_LOCK_UNLOCKED(.lock),                              \
++		.lflags    = 0UL,                                                      \
++		.mate      = FWDER_NULL,                                               \
++		.bypass_fn = _fwder_bypass_fn,                                         \
++		.dev_def   = FWDER_NET_DEVICE_NULL,                                    \
++		.devs_cnt  = 0,                                                        \
++		.devs_dll  = { .next_p = NULL, .prev_p = NULL },                       \
++		.wofa      = FWDER_WOFA_NULL,                                          \
++		.mode      = FWDER_NIC_MODE,                                           \
++		.dataoff   = 0,                                                        \
++		.osh       = NULL,                                                     \
++		.name      = #NAME                                                     \
++	}
++
++/** Static declaration of fwder objects per cpu, accessed via per_cpu, */
++DEFINE_PER_CPU(struct fwder, fwder_upstream_g) = _FWDER_INI_(upstream);
++DEFINE_PER_CPU(struct fwder, fwder_dnstream_g) = _FWDER_INI_(dnstream);
++
++/** Fetch an upstream or dnstream forwarder instance, by CPU# as unit. */
++#define FWDER_GET(fwder, funit)	        &per_cpu((fwder), (funit))
++
++#else  /* ! CONFIG_SMP */
++
++#define _FWDER_INI_(NAME, FUNIT)                                               \
++	{                                                                          \
++		.lflags    = 0UL,                                                      \
++		.mate      = FWDER_NULL,                                               \
++		.bypass_fn = _fwder_bypass_fn,                                         \
++		.dev_def   = FWDER_NET_DEVICE_NULL,                                    \
++		.devs_cnt  = 0,                                                        \
++		.devs_dll  = { .next_p = NULL, .prev_p = NULL },                       \
++		.wofa      = FWDER_WOFA_NULL,                                          \
++		.mode      = FWDER_NIC_MODE,                                           \
++		.dataoff   = 0,                                                        \
++		.osh       = (void*)NULL,                                              \
++		.unit      = FUNIT,                                                    \
++		.name      = #NAME                                                     \
++	}
++
++
++/** Static declaration of a set of upstream fwder indexed by GMAC/radio unit. */
++fwder_t fwder_upstream_g[FWDER_MAX_UNIT] = {
++	_FWDER_INI_(upstream, 0),
++	_FWDER_INI_(upstream, 1)
++};
++
++/** Static declaration of a set of dnstream fwder indexed by GMAC/radio unit. */
++fwder_t fwder_dnstream_g[FWDER_MAX_UNIT] = {
++	_FWDER_INI_(dnstream, 0),
++	_FWDER_INI_(dnstream, 1)
++};
++
++/** Fetch an upstream or dnstream forwarder instance, indexed by unit. */
++#define FWDER_GET(fwder, funit)         &fwder[funit]
++
++#endif /* ! CONFIG_SMP */
++
++
++/** Mapping a interface unit to a fwedr unit. */
++#define FWDER_UNIT(unit)                ((unit) % FWDER_MAX_UNIT)
++
++/** Used to instantiate a pool of virtual fwder if per fwder.
++ * When multiple WLAN interfaces bind to a fwder, a list of all actively bound
++ * WLAN interfaces is maintained in the upstream fwder. This list will be used
++ * to broadcast packets to all active WLAN interfaces (excluding the WLAN
++ * interface on which the broadcast packet was received).
++ */
++typedef struct fwder_if {
++	dll_t             node;         /* Double Linked List node */
++	struct net_device * dev;        /* Network device associated with wlif */
++} fwder_if_t;
++
++/** Free pool of fwder_if objects. */
++typedef struct fwder_if_pool {
++	fwder_if_t     pool[FWDER_MAX_RADIO][FWDER_MAX_IF];
++} fwder_if_pool_t;
++
++/** Static declaration of a global if pool: an array of fwder_if objects.
++ * Accessible from either CPU core (lock free).
++ */
++struct fwder_if_pool _fwder_if_pool_g;
++
++/** Fetch the forwarder object for a given a direction and unit. */
++static inline fwder_t *
++___fwder_self(const fwder_dir_t dir, int funit)
++{
++	fwder_t * fwder;
++
++	if (dir == (int)FWDER_UPSTREAM)
++		fwder = FWDER_GET(fwder_upstream_g, funit);
++	else
++		fwder = FWDER_GET(fwder_dnstream_g, funit);
++
++	/* fwder's unit may not be set yet. */
++	return fwder;
++}
++
++static inline fwder_t *
++__fwder_self(const fwder_dir_t dir, int funit)
++{
++	fwder_t * fwder = ___fwder_self(dir, funit);
++	FWDER_ASSERT(fwder->unit == funit);
++	return fwder;
++}
++
++/** Update number of devices in upstream forwarder. */
++static inline void
++__fwder_sync_devs_cnt(fwder_t * fwder_dn)
++{
++	fwder_t * fwder_up = fwder_dn->mate;
++	fwder_up->devs_cnt = fwder_dn->devs_cnt + 1; /* upstream has one fwdXX */
++}
++
++/** Fetch the fwder if object, give a unit and subunit. */
++static inline fwder_if_t *
++__fwder_if(int unit, int subunit)
++{
++	FWDER_ASSERT(unit < FWDER_MAX_RADIO);
++	FWDER_ASSERT(subunit < FWDER_MAX_IF);
++	return &_fwder_if_pool_g.pool[unit][subunit];
++}
++
++/** Instantiate and initialize forwarder, WOFA and free if pool. */
++int
++fwder_init(void)
++{
++	int dir, funit, unit, subunit;
++	fwder_if_t * fwder_if;
++	fwder_t * fwder;
++
++	if (_fwder_wofa[0] != FWDER_WOFA_NULL)
++		return FWDER_SUCCESS;
++
++	FWDER_TRACE(("%s: WOFA dictionary, fwder_if pool, fwder, cpumap\n",
++	             __FUNCTION__));
++
++	/* Instantiate WOFA dictionary. */
++	for (funit = 0; funit < FWDER_MAX_UNIT; funit++) {
++		_fwder_wofa[funit] = _fwder_wofa_init(funit);
++		if (_fwder_wofa[funit] == FWDER_WOFA_NULL)
++			return FWDER_FAILURE;
++	}
++
++	/* Initialize the free pool of fwder_if */
++	for (unit = 0; unit < FWDER_MAX_RADIO; unit++) {
++		for (subunit = 0; subunit < FWDER_MAX_IF; subunit++) {
++			fwder_if = __fwder_if(unit, subunit);
++			fwder_if->dev = FWDER_NET_DEVICE_NULL;
++		}
++	}
++
++#if defined(CONFIG_SMP)
++	FWDER_TRACE(("%s SMP Per CPU objects.\n", __FUNCTION__));
++#else
++	FWDER_TRACE(("%s global pair.\n", __FUNCTION__));
++#endif
++
++#if defined(CONFIG_SMP)
++	for_each_online_cpu(funit)
++#else
++	for (funit = 0; funit < FWDER_MAX_UNIT; funit++)
++#endif /* ! CONFIG_SMP */
++	{
++		/* Initialize the fwder instances */
++		for (dir = (int)FWDER_UPSTREAM; dir < (int)FWDER_MAX_DIR; dir++) {
++
++			fwder = ___fwder_self(dir, funit);
++			fwder->mate = ___fwder_self((dir + 1) % FWDER_MAX_DIR, funit);
++
++			fwder->bypass_fn = _fwder_bypass_fn;
++
++			fwder->devs_cnt = 0;
++			fwder->dev_def = FWDER_NET_DEVICE_NULL;
++			dll_init(&fwder->devs_dll);
++
++			fwder->wofa = _fwder_wofa[funit];
++
++			FWDER_STATS_CLR(fwder->transmit);
++			FWDER_STATS_CLR(fwder->dropped);
++			FWDER_STATS_CLR(fwder->flooded);
++
++			fwder->mode = FWDER_NIC_MODE;
++			fwder->dataoff = 0;
++			fwder->unit = funit;
++		}
++
++	} /* for_each_online_cpu | for funit = 0 .. FWDER_MAX_UNIT */
++
++	{   /* Initialize the radio to fwder_unit mapping from FWDER_CPUMAP_NVAR */
++		const char * fwder_cpumap_nvar;
++		fwder_cpumap_nvar = getvar(NULL, FWDER_CPUMAP_NVAR);
++
++		if (fwder_cpumap_nvar == NULL) {
++			fwder_cpumap_nvar = FWDER_CPUMAP_DEFAULT; /* default cpumap */
++			FWDER_ERROR(("ERROR %s: %s nvram not present, using default\n",
++			             __FUNCTION__, FWDER_CPUMAP_NVAR));
++		}
++
++		if (_fwder_cpumap_parse(fwder_cpumap_nvar) == FWDER_FAILURE) {
++			FWDER_ERROR(("ERROR %s: failure parsing %s\n",
++			             __FUNCTION__, fwder_cpumap_nvar));
++			return FWDER_FAILURE;
++		}
++	}
++	return FWDER_SUCCESS;
++}
++
++/** Destruct forwarder. */
++int
++fwder_exit(void)
++{
++	int funit;
++	fwder_t * fwder;
++
++#if defined(CONFIG_SMP)
++	for_each_online_cpu(funit)
++#else
++	for (funit = 0; funit < FWDER_MAX_UNIT; funit++)
++#endif /* ! CONFIG_SMP */
++	{
++		fwder = __fwder_self(FWDER_UPSTREAM, funit);
++		_fwder_wofa_fini(fwder->wofa);
++		fwder->mate->wofa = fwder->wofa = FWDER_WOFA_NULL;
++		_fwder_wofa[funit] = FWDER_WOFA_NULL;
++	}
++
++	return FWDER_SUCCESS;
++}
++
++
++/** Register a bypass handler and return the reverse dir forwarder object.
++ * fwder_attach is called by the GMAC forwarder and the primary WLAN interface.
++ *
++ * The primary WLAN interface will attach a NULL dev.
++ * WLAN interfaces, including the primary interface, needs to explicitly invoke
++ * fwder_bind().
++ */
++fwder_t *
++fwder_attach(fwder_dir_t dir, int unit, fwder_mode_t mode,
++             fwder_bypass_fn_t bypass_fn, struct net_device * dev, void * osh)
++{
++	int funit;
++	fwder_t * self;
++	fwder_t * mate; /* Reverse direction forwarder, returned */
++
++	FWDER_TRACE(("%s: dir<%s> unit<%d> mode<%s> <%p,%pS> dev<%p:%s>\n",
++	             __FUNCTION__, __fwder_dir(dir), unit, __fwder_mode(mode),
++	             bypass_fn, bypass_fn, dev, __SSTR(dev, name)));
++
++	ASSERT((int)dir < (int)FWDER_MAX_DIR);
++	ASSERT((int)mode < (int)FWDER_MAX_MODE);
++	ASSERT(bypass_fn != FWDER_BYPASS_FN_NULL);
++	if (dir == FWDER_DNSTREAM) {
++		ASSERT(dev == FWDER_NET_DEVICE_NULL);
++	} else {
++		ASSERT(dev != FWDER_NET_DEVICE_NULL);
++	}
++
++	/* Use the unit # and direction to fetch the fwder and mate's fwder */
++	funit = FWDER_UNIT(unit);
++	self = __fwder_self(dir, funit);
++
++	_FWDER_LOCK(self);                                     /* ++LOCK */
++
++	/* Configure self */
++	self->mode = mode; /* in dnstream dir, mode will be used by fwd#0, fwd#1 */
++	self->bypass_fn = bypass_fn;
++	if (dir == FWDER_UPSTREAM) {
++		self->devs_cnt = 1;
++		self->dev_def = dev;
++		FWDER_ASSERT(dev != FWDER_NET_DEVICE_NULL);
++	}
++	self->osh = osh;
++
++	/* Return the mate's fwder */
++	mate = self->mate;
++	FWDER_ASSERT(mate->unit == self->unit);
++
++	_FWDER_UNLOCK(self);                                   /* --LOCK */
++
++	return mate;
++}
++
++/** Dettach an interface from the forwarder by dettaching the bypass handler.
++ * fwder_dettach is called by the GMAC forwarder and the primary WLAN interface.
++ */
++fwder_t *
++fwder_dettach(fwder_t * mate, fwder_dir_t dir, int unit)
++{
++	int funit;
++	fwder_t * self;
++
++	FWDER_TRACE(("%s: mate<%p> dir<%s> unit<%d>\n",
++	            __FUNCTION__, mate, __fwder_dir(dir), unit));
++
++	ASSERT(dir < FWDER_MAX_DIR);
++	ASSERT(unit < FWDER_MAX_RADIO);
++
++	if (mate == FWDER_NULL)
++		return FWDER_NULL;
++
++	funit = FWDER_UNIT(unit);
++	self = __fwder_self(dir, funit);
++
++	ASSERT(self == mate->mate);
++	FWDER_ASSERT(self->unit == mate->unit);
++
++	_FWDER_LOCK(self);                                     /* ++LOCK */
++
++	/* A WLAN unit dettached */
++	if (dir == (int)FWDER_DNSTREAM) {
++		int subunit;
++		fwder_if_t * fwder_if;
++
++		for (subunit = 0; subunit < FWDER_MAX_IF; subunit++) {
++			fwder_if = __fwder_if(unit, subunit);
++
++			/* Ensure no interfaces are still bound to the forwarder */
++			if (fwder_if->dev != FWDER_NET_DEVICE_NULL) {
++				/* Move to pool's free list */
++				FWDER_ASSERT(!dll_empty(&self->devs_dll));
++				fwder_flush(self, (wofa_t)fwder_if->dev);
++				self->devs_cnt--;
++				dll_delete(&fwder_if->node);
++				fwder_if->dev = FWDER_NET_DEVICE_NULL;
++			}
++		}
++
++		__fwder_sync_devs_cnt(self); /* sync upstream fwder devs_cnt */
++	}
++
++	if (self->devs_cnt == 0) {
++		self->bypass_fn = _fwder_bypass_fn;
++		self->dev_def = FWDER_NET_DEVICE_NULL;
++		self->mode = FWDER_NIC_MODE;
++	}
++
++	if (dir == FWDER_UPSTREAM) {
++		self->dev_def = FWDER_NET_DEVICE_NULL;
++	}
++
++	_FWDER_UNLOCK(self);                                   /* --LOCK */
++
++	return FWDER_NULL;
++}
++
++/** Given an upstream fwder handle, register a default interface
++ * to mate downstream fwder. Deregister bu using a NULL net_device.
++ */
++int
++fwder_register(fwder_t * fwder, struct net_device * dev)
++{
++	FWDER_TRACE(("%s fwder<%p> dev<%p:%s>\n", __FUNCTION__,
++	             fwder, dev, __SSTR(dev, name)));
++
++	if (fwder == FWDER_NULL)
++		return FWDER_FAILURE;
++
++	ASSERT(fwder == __fwder_self(FWDER_UPSTREAM, fwder->unit));
++
++	/* register with downstream fwder */
++	fwder->mate->dev_def = dev;
++
++	return FWDER_SUCCESS;
++}
++
++/** Given a downstream fwder handle, fetch the default registered device. */
++struct net_device *
++fwder_default(fwder_t * fwder)
++{
++	if (fwder == FWDER_NULL)
++		return FWDER_NET_DEVICE_NULL;
++
++	ASSERT(fwder == __fwder_self(FWDER_DNSTREAM, fwder->unit));
++
++	return fwder->dev_def;
++}
++
++/** Bind/Unbind HW switching to a primary/virtual interface.
++ * WLAN interfaces use the fwder_bind to attach a primary or virtual interface
++ * once the net_device is registered. The WLAN interface name will be fetched
++ * from the nvram fwd_wlandevs to determine eligibility for HW switching.
++ *
++ * Note: The interface is added to the downstream forwarder.
++ *       mate points to upstream forwarder.
++ */
++fwder_t *
++fwder_bind(fwder_t * mate, int unit, int subunit, struct net_device * dev,
++	bool attach)
++{
++	int funit;
++	fwder_t * self;
++	fwder_if_t * fwder_if;
++
++	FWDER_TRACE(("%s unit<%d> subunit<%d> dev<%p:%s>\n", __FUNCTION__,
++	             unit, subunit, dev, __SSTR(dev, name)));
++
++	ASSERT(unit < FWDER_MAX_RADIO);
++	ASSERT(subunit < FWDER_MAX_IF);
++	ASSERT(dev != FWDER_NET_DEVICE_NULL);
++
++	/* Primary did not attach a fwder */
++	if (mate == FWDER_NULL)
++		return FWDER_NULL;
++
++	{	/* Check if this interface is eligible for HW switching */
++		const char * fwder_wlifs_nvar;
++		fwder_wlifs_nvar = getvar(NULL, FWDER_WLIFS_NVAR);
++		if (bcmstrstr(fwder_wlifs_nvar, dev->name) == NULL) {
++			return FWDER_NULL;
++		}
++	}
++
++	funit = FWDER_UNIT(unit);
++	fwder_if = __fwder_if(unit, subunit);
++
++	/* Fetch the fwder and the fwder_if */
++	self = mate->mate; /* downstream direction forwarder */
++	FWDER_ASSERT(mate == __fwder_self(FWDER_UPSTREAM, funit));
++	FWDER_ASSERT(self == __fwder_self(FWDER_DNSTREAM, funit));
++	FWDER_ASSERT(mate->unit == self->unit);
++
++	/* Add the interface to the downstream forwarder (used by et). */
++	_FWDER_LOCK(self);                                     /* ++LOCK */
++
++	if (attach == TRUE) {
++
++		/* Check if wlif<subunit> is re-binding. */
++		if (fwder_if->dev != FWDER_NET_DEVICE_NULL) {
++			FWDER_WARN(("%s re bind at<%d,%d> new dev<%p:%s> old dev<%p:%s>\n",
++			            __FUNCTION__, unit, subunit, dev, __SSTR(dev, name),
++			            fwder_if->dev, __SSTR(fwder_if->dev, name)));
++			ASSERT(dev == fwder_if->dev);
++			fwder_if->dev = dev;
++			goto unlock_ret;
++		}
++
++		/* Move to active if list. */
++		fwder_if->dev = dev;
++		dll_append(&self->devs_dll, &fwder_if->node);
++
++		self->devs_cnt++;
++
++	} else { /* attach == FALSE */
++
++		if (fwder_if->dev != FWDER_NET_DEVICE_NULL) {
++			/* Move to pool's free list */
++			dll_delete(&fwder_if->node);
++			fwder_if->dev = FWDER_NET_DEVICE_NULL;
++
++			/* Is attached, so dettach */
++			self->devs_cnt--;
++			FWDER_ASSERT(self->devs_cnt >= 0);
++
++		} else { /* already dettached, do nothing. */
++			FWDER_WARN(("%s unbind NULL dev at<%d,%d>\n",
++			            __FUNCTION__, unit, subunit));
++		}
++	}
++
++	__fwder_sync_devs_cnt(self); /* sync upstream fwder devs_cnt */
++
++unlock_ret:
++
++	_FWDER_UNLOCK(self);                                   /* --LOCK */
++
++	return mate;
++}
++
++/** Add a station to a forwarder's WOFA on association or reassociation. */
++int
++fwder_reassoc(fwder_t * fwder, uint16 * symbol, wofa_t wofa)
++{
++	int err;
++	if (fwder == FWDER_NULL)
++		return FWDER_FAILURE;
++
++	FWDER_TRACE(("%s fwder<%p,%s> " __EFMT "wofa<0x%08x>\n", __FUNCTION__,
++	           fwder, __SSTR(fwder, name), __EVAL((uint8*)symbol), (uint)wofa));
++	FWDER_ASSERT(fwder->wofa == fwder->mate->wofa);
++	FWDER_ALIGN16(symbol);
++
++	err = __fwder_wofa_add(fwder->wofa, symbol, wofa);
++
++	return err;
++}
++
++/** Delete a station from a forwarder's WOFA on deassociation. */
++int
++fwder_deassoc(fwder_t * fwder, uint16 * symbol, wofa_t wofa)
++{
++	int err;
++	if (fwder == FWDER_NULL)
++		return FWDER_FAILURE;
++
++	FWDER_TRACE(("%s fwder<%p,%s> " __EFMT "wofa<0x%08x>\n", __FUNCTION__,
++	       fwder, __SSTR(fwder, name), __EVAL((uint8*)symbol), (uint)wofa));
++	FWDER_ALIGN16(symbol);
++	FWDER_ASSERT(fwder->wofa == fwder->mate->wofa);
++
++	err = __fwder_wofa_del(fwder->wofa, symbol, wofa);
++
++	return err;
++}
++
++/** Flush all entries in the forwarder's WOFA containing the metadata */
++int
++fwder_flush(fwder_t * fwder, wofa_t wofa)
++{
++	int err;
++	if ((fwder == FWDER_NULL) || (wofa == FWDER_WOFA_INVALID))
++		return FWDER_FAILURE;
++
++	FWDER_TRACE(("%s fwder<%p,%s> wofa<0x%08x>\n", __FUNCTION__,
++	            fwder, __SSTR(fwder, name), (uint)wofa));
++	FWDER_ASSERT(fwder->wofa == fwder->mate->wofa);
++
++	err = __fwder_wofa_clr(fwder->wofa, wofa);
++
++	return err;
++}
++
++/** Lookup WOFA for a station (by Mac Address) assocatied with a forwarder. */
++wofa_t
++fwder_lookup(fwder_t * fwder, uint16 * symbol, const int port)
++{
++	wofa_t wofa;
++	FWDER_ASSERT(fwder != FWDER_NULL);
++	FWDER_PTRACE(("%s fwder<%p,%s> " __EFMT "port<%d>\n", __FUNCTION__,
++	              fwder, __SSTR(fwder, name), __EVAL((uint8*)symbol), port));
++	FWDER_ALIGN16(symbol);
++	wofa = __fwder_wofa_lkup(fwder->wofa, symbol, port);
++	return wofa;
++}
++
++/** Flood a packet to all interfaces. Free original if clone is FALSE. */
++int
++fwder_flood(fwder_t * fwder, struct sk_buff * skb, void * osh, bool clone,
++            fwder_flood_fn_t dev_start_xmit)
++{
++	int ret = FWDER_SUCCESS;
++	struct sk_buff * nskb;
++	struct net_device * dev;
++	dll_t * item, * next, * list;
++
++	FWDER_PTRACE(("%s fwder<%p,%s> skb<0x%p>, osh<%p>\n", __FUNCTION__,
++	              fwder, __SSTR(fwder, name), skb, osh));
++
++	/* Traverse the list of bound interfaces in the downstream forwarder. */
++	list = &fwder->devs_dll;
++	for (item = dll_head_p(list); !dll_end(list, item); item = next) {
++		next = dll_next_p(item);
++
++		dev = ((fwder_if_t *)item)->dev; /* fetch fwder interface's netdevice */
++
++		/* do not flood back to self, so skb->dev must be properly set */
++		if ((dev != skb->dev) && (dev->flags & IFF_UP)) {
++
++			/* Use PKTDUP, which will manipulate the appropriate CTF fields */
++			if ((nskb = (struct sk_buff *)PKTDUP(osh, skb)) == NULL) {
++				ret = FWDER_FAILURE;
++				break;
++			}
++
++			FWDER_PTRACE(("%s skb<0x%p> %pS\n", __FUNCTION__,
++			              nskb, dev_start_xmit));
++
++			/* dispatch to either NIC or DHD start xmit */
++			nskb->dev = dev;
++			dev_start_xmit(nskb, dev, TRUE);
++
++			FWDER_STATS_ADD(fwder->flooded, 1);
++		}
++	}
++
++	if (clone == FALSE) { /* free original skb */
++		PKTFREE(osh, skb, FALSE);
++	}
++
++	return ret;
++}
++
++/** Fixup a packet received from a GMAC forwarder. */
++void
++fwder_fixup(fwder_t * fwder, struct sk_buff * skb)
++{
++	FWDER_PTRACE(("%s fwder<%p,%s> skb<%p>\n", __FUNCTION__,
++	              fwder, __SSTR(fwder, name), skb));
++	/* strip off rxhdr and popping of BRCM TAG */
++	__skb_pull(skb, fwder->dataoff);
++	ASSERT(((ulong)skb->data & 3) == 2); /* aligned 2-mod-4 */
++
++	/* strip off 4Byte CRC32 at tail end */
++	skb_trim(skb, skb->len - ETHER_CRC_LEN);
++
++	PKTCLRFWDERBUF(fwder->osh, skb); /* redundant, but safe */
++}
++
++/** Downstream forwarder discarding a packet in the context of GMAC forwarder */
++void
++fwder_discard(fwder_t * fwder, struct sk_buff * skb)
++{
++	FWDER_PTRACE(("%s fwder<%p,%s> skb<%p>\n", __FUNCTION__,
++	              fwder, __SSTR(fwder, name), skb));
++	PKTFRMFWDER(fwder->osh, skb, 1);
++	PKTFREE(fwder->osh, skb, FALSE);
++}
++
++/** Debug dump the Radio to forwarder cpu mapping. */
++static void
++_fwder_cpumap_dump(struct bcmstrbuf *b)
++{
++	int ix;
++	fwder_cpumap_t * cpumap;
++	for (ix = 0; ix < FWDER_MAX_RADIO; ix++) {
++		cpumap = &fwder_cpumap_g[ix];
++		if (cpumap->cpu == -1) continue;
++		bcm_bprintf(b,
++		    "%d. mode<%s> chan<%s> band<%d> irq<%d> cpu<%d> unit<%d>\n",
++		    ix, __fwder_mode(cpumap->mode), __fwder_chan(cpumap->chan),
++		    cpumap->band, cpumap->irq, cpumap->cpu, cpumap->unit);
++	}
++}
++
++/** Debug dump a forwarding object. */
++static void
++_fwder_dump(struct bcmstrbuf *b, const fwder_t * fwder)
++{
++	if (fwder == FWDER_NULL)
++		return;
++
++	bcm_bprintf(b, "Fwder[%p,%s]: unit<%u> mate<%p:%s> mode<%s>"
++#if defined(FWDER_STATS)
++	            " transmit<%u> dropped<%u> flooded<%u>\n"
++#endif
++	            "\tdevs_cnt<%u> dev<%p:%s> bypass<%p:%pS>\n", fwder,
++	            __SSTR(fwder, name), fwder->unit, fwder->mate,
++	            __SSTR(fwder->mate, name), __fwder_mode(fwder->mode),
++#if defined(FWDER_STATS)
++	            fwder->transmit, fwder->dropped, fwder->flooded,
++#endif
++	            fwder->devs_cnt, fwder->dev_def, __SSTR(fwder->dev_def, name),
++	            fwder->bypass_fn, fwder->bypass_fn);
++}
++
++/** Debug dump the list of bound interfaces (net_device). */
++static void
++_fwder_devs_dump(struct bcmstrbuf *b, dll_t * fwder_if_dll)
++{
++	struct net_device * dev;
++	dll_t * item, * next;
++	bcm_bprintf(b, "\tBound devices:\n");
++	/* Traverse the list of active interfaces */
++	/* Do additional checking for item because fwder_if_dll doesn't be initialized
++	 * by dll_init when gmac_fwd is FALSE.
++	 */
++	for (item = dll_head_p(fwder_if_dll);
++	     item && !dll_end(fwder_if_dll, item);
++	     item = next)
++	{
++		next = dll_next_p(item);
++		dev = ((fwder_if_t *)item)->dev;
++		bcm_bprintf(b, "\t\tdev<%p,%s>\n", dev, __SSTR(dev, name));
++	}
++}
++
++/** Debug dump all forwarding objects units<0,1>: <Upstream,Dnstream> pairs. */
++void
++fwder_dump(struct bcmstrbuf *b)
++{
++	int unit;
++	fwder_t * fwder;
++
++	ASSERT(b != NULL);
++
++	bcm_bprintf(b, "Fwder Dump default bypass<%p,%pS>\n",
++	            _fwder_bypass_fn, _fwder_bypass_fn);
++
++	/* Dump the Radio to Fwder unit cpu map */
++	_fwder_cpumap_dump(b);
++
++	/* Traverse the two bidirectional forwarders. */
++#if defined(CONFIG_SMP)
++	for_each_online_cpu(unit)
++#else
++	for (unit = 0; unit < FWDER_MAX_UNIT; unit++)
++#endif  /* !CONFIG_SMP */
++	{
++		fwder = FWDER_GET(fwder_upstream_g, unit);
++		_fwder_dump(b, fwder); /* dump upstream forwarder */
++		_fwder_dump(b, fwder->mate); /* dump mate downstream forwarder */
++		_fwder_devs_dump(b, &fwder->devs_dll); /* dump bound interfaces */
++		_fwder_wofa_dump(b, fwder->wofa); /* dump WOFA ARL */
++	}	/* for_each_online_cpu | for unit = 0 .. FWDER_MAX_UNIT */
++}
++#endif  /*  BCM_GMAC3 */
+diff --git a/src/linux/universal/linux-3.10/brcm/arm/shared/pcie_core.c b/src/linux/universal/linux-3.10/brcm/arm/shared/pcie_core.c
+new file mode 100644
+index 00000000000..2bd1de0c534
+--- /dev/null
++++ b/src/linux/universal/linux-3.10/brcm/arm/shared/pcie_core.c
+@@ -0,0 +1,80 @@
++/** @file pcie_core.c
++ *
++ * Contains PCIe related functions that are shared between different driver models (e.g. firmware
++ * builds, DHD builds, BMAC builds), in order to avoid code duplication.
++ *
++ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
++ * 
++ * Permission to use, copy, modify, and/or distribute this software for any
++ * purpose with or without fee is hereby granted, provided that the above
++ * copyright notice and this permission notice appear in all copies.
++ * 
++ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
++ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
++ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
++ * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
++ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
++ * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
++ * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
++ *
++ * $Id: pcie_core.c 444841 2013-12-21 04:32:29Z $
++ */
++
++#include <bcm_cfg.h>
++#include <typedefs.h>
++#include <bcmutils.h>
++#include <bcmdefs.h>
++#include <osl.h>
++#include <siutils.h>
++#include <hndsoc.h>
++#include <sbchipc.h>
++
++#include "pcie_core.h"
++
++/* local prototypes */
++
++/* local variables */
++
++/* function definitions */
++
++#ifdef BCMDRIVER
++
++void pcie_watchdog_reset(osl_t *osh, si_t *sih, sbpcieregs_t *sbpcieregs)
++{
++	uint32 val, i, lsc;
++	uint16 cfg_offset[] = {PCIECFGREG_STATUS_CMD, PCIECFGREG_PM_CSR,
++		PCIECFGREG_MSI_CAP, PCIECFGREG_MSI_ADDR_L,
++		PCIECFGREG_MSI_ADDR_H, PCIECFGREG_MSI_DATA,
++		PCIECFGREG_LINK_STATUS_CTRL2, PCIECFGREG_RBAR_CTRL,
++		PCIECFGREG_PML1_SUB_CTRL1, PCIECFGREG_REG_BAR2_CONFIG,
++		PCIECFGREG_REG_BAR3_CONFIG};
++	uint32 origidx = si_coreidx(sih);
++
++	/* Disable/restore ASPM Control to protect the watchdog reset */
++	W_REG(osh, &sbpcieregs->configaddr, PCIECFGREG_LINK_STATUS_CTRL);
++	lsc = R_REG(osh, &sbpcieregs->configdata);
++	val = lsc & (~PCIE_ASPM_ENAB);
++	W_REG(osh, &sbpcieregs->configdata, val);
++
++	si_setcore(sih, PCIE2_CORE_ID, 0);
++	si_corereg(sih, SI_CC_IDX, OFFSETOF(chipcregs_t, watchdog), ~0, 4);
++	OSL_DELAY(100000);
++#ifdef BCMQT
++	OSL_DELAY(200000);
++#endif /* BCMQT */
++
++	W_REG(osh, &sbpcieregs->configaddr, PCIECFGREG_LINK_STATUS_CTRL);
++	W_REG(osh, &sbpcieregs->configdata, lsc);
++
++	/* Write configuration registers back to the shadow registers
++	 * cause shadow registers are cleared out after watchdog reset.
++	 */
++	for (i = 0; i < ARRAYSIZE(cfg_offset); i++) {
++		W_REG(osh, &sbpcieregs->configaddr, cfg_offset[i]);
++		val = R_REG(osh, &sbpcieregs->configdata);
++		W_REG(osh, &sbpcieregs->configdata, val);
++	}
++	si_setcoreidx(sih, origidx);
++}
++
++#endif /* BCMDRIVER */

@@ -1,0 +1,23 @@
+This is a prerelease version of mpm-itk for Apache 2.4.7 or newer.
+2.4.6 or before will not work; for 2.2.x, there's an entirely different
+patch set (see http://mpm-itk.sesse.net/).
+
+It is much less tested than the 2.2.x series, so exercise caution;
+however, several organizations do run it in production. Follow the
+mpm-itk mailing list (http://lists.err.no/mailman/listinfo/mpm-itk)
+for more information as it becomes available.
+
+To build, simply run configure and then make; you may have to adjust the apxs
+path, e.g.
+
+  ./configure --with-apxs=apxs2
+
+or
+
+  ./configure --with-apxs=/usr/local/apache2/bin/apxs
+
+Similarly, make install (as root) will install the module, after which you can add
+
+  LoadModule mpm_itk_module modules/mpm_itk.so
+
+to your httpd.conf.

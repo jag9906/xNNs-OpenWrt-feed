@@ -1,0 +1,20 @@
+APXS=@APXS@
+SRCS=mpm_itk.c seccomp.c
+HDRS=seccomp.h mpm_default.h
+LIBS=@LIBS@
+
+mpm_itk.la: $(SRCS) $(HDRS)
+	$(APXS) -c $(SRCS) $(LIBS)
+
+install: mpm_itk.la
+	$(APXS) -i $<
+
+clean:
+	$(RM) -r .libs
+	$(RM) $(SRCS:.c=.o) $(SRCS:.c=.lo) $(SRCS:.c=.la) $(SRCS:.c=.slo)
+
+distclean: clean
+	$(RM) -r autom4te.cache
+	$(RM) Makefile config.log config.h config.status
+
+.PHONY: install clean distclean
